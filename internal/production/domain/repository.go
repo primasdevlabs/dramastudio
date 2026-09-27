@@ -3,6 +3,9 @@ package domain
 import "context"
 
 type ProductionRepository interface {
-	FindByID(ctx context.Context, id string) (*Production, error)
-	Save(ctx context.Context, prod *Production) error
+	SaveJob(ctx context.Context, job *ProductionJob) error
+	FindJobByID(ctx context.Context, id string) (*ProductionJob, error)
+	ListJobsByProject(ctx context.Context, projectID string) ([]*ProductionJob, error)
+	SaveApproval(ctx context.Context, app *ApprovalRequest) error
+	ListApprovalsByProject(ctx context.Context, projectID string) ([]*ApprovalRequest, error)
 }

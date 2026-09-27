@@ -12,7 +12,7 @@ func NewPostgresCharacterRepository() *PostgresCharacterRepository {
 }
 
 func (r *PostgresCharacterRepository) FindByID(ctx context.Context, id domain.CharacterID) (*domain.Character, error) {
-	return domain.NewCharacter(id, "Sample Character"), nil
+	return domain.NewCharacter(id, "proj_1", "Sample Character", "Protagonist"), nil
 }
 
 func (r *PostgresCharacterRepository) List(ctx context.Context) ([]*domain.Character, error) {

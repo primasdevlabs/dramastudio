@@ -2,7 +2,9 @@ package domain
 
 import "context"
 
-type PostProductionRepository interface {
-	FindEditByID(ctx context.Context, id string) (*Edit, error)
-	SaveEdit(ctx context.Context, edit *Edit) error
+type PostproductionRepository interface {
+	SaveTimeline(ctx context.Context, t *Timeline) error
+	FindTimelineByEpisode(ctx context.Context, episodeID string) (*Timeline, error)
+	SaveRender(ctx context.Context, r *RenderTask) error
+	FindRenderByID(ctx context.Context, id string) (*RenderTask, error)
 }
