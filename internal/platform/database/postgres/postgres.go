@@ -2,6 +2,7 @@ package postgres
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -55,3 +56,8 @@ func (db *DB) Close() {
 
 var _ Querier = (*pgxpool.Pool)(nil)
 var _ Querier = (pgx.Tx)(nil)
+
+// IsNoRows reports whether err means "no rows" from pgx.
+func IsNoRows(err error) bool {
+	return err != nil && errors.Is(err, pgx.ErrNoRows)
+}
