@@ -1,21 +1,30 @@
-import { create } from 'zustand'
-
-export type ProductionMode = 'monitored' | 'autonomous'
+import { create } from "zustand";
 
 interface StudioState {
-  activeProjectId: string
-  productionMode: ProductionMode
-  activeEpisodeId: string | null
-  setActiveProject: (id: string) => void
-  setProductionMode: (mode: ProductionMode) => void
-  setActiveEpisode: (id: string | null) => void
+  activeProjectId: string | null;
+  activeEpisodeId: string | null;
+  activeTab: string;
+  isSidebarOpen: boolean;
+  isCommandPaletteOpen: boolean;
+  setActiveProjectId: (id: string | null) => void;
+  setActiveEpisodeId: (id: string | null) => void;
+  setActiveTab: (tab: string) => void;
+  toggleSidebar: () => void;
+  toggleCommandPalette: () => void;
+  setCommandPaletteOpen: (open: boolean) => void;
 }
 
 export const useStudioStore = create<StudioState>((set) => ({
-  activeProjectId: 'prj-01',
-  productionMode: 'monitored',
-  activeEpisodeId: 'ep-12',
-  setActiveProject: (id) => set({ activeProjectId: id }),
-  setProductionMode: (mode) => set({ productionMode: mode }),
-  setActiveEpisode: (id) => set({ activeEpisodeId: id }),
-}))
+  activeProjectId: null,
+  activeEpisodeId: null,
+  activeTab: "overview",
+  isSidebarOpen: true,
+  isCommandPaletteOpen: false,
+  setActiveProjectId: (id) => set({ activeProjectId: id }),
+  setActiveEpisodeId: (id) => set({ activeEpisodeId: id }),
+  setActiveTab: (tab) => set({ activeTab: tab }),
+  toggleSidebar: () => set((state) => ({ isSidebarOpen: !state.isSidebarOpen })),
+  toggleCommandPalette: () =>
+    set((state) => ({ isCommandPaletteOpen: !state.isCommandPaletteOpen })),
+  setCommandPaletteOpen: (open) => set({ isCommandPaletteOpen: open }),
+}));
