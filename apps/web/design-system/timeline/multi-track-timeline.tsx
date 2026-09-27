@@ -38,14 +38,14 @@ export function MultiTrackTimeline({
   const [isPlaying, setIsPlaying] = useState(false);
 
   return (
-    <Paper p="md" radius="xl" withBorder className="bg-studio-card border-studio-border shadow-xl">
+    <Paper p="md" radius="md" withBorder className="bg-studio-card border-studio-border">
       <Stack gap="md">
         <Group justify="space-between">
           <Group gap="xs">
             <ActionIcon
               variant="filled"
-              color="cyan"
-              radius="xl"
+              color="terracotta"
+              radius="sm"
               size="md"
               onClick={() => setIsPlaying(!isPlaying)}
             >
@@ -55,32 +55,32 @@ export function MultiTrackTimeline({
               Multi-Track FFmpeg Timeline
             </Text>
           </Group>
-          <Badge color="cyan" variant="light">
+          <Badge color="terracotta" variant="light" className="font-mono">
             9:16 Vertical (1080x1920)
           </Badge>
         </Group>
 
         <Stack gap="xs">
           {tracks.map((track) => (
-            <div key={track.id} className="bg-studio-panel border border-studio-border rounded-xl p-3 flex items-center gap-4">
+            <div key={track.id} className="bg-studio-panel border border-studio-border rounded-md p-3 flex items-center gap-4">
               <div className="w-48 shrink-0 flex items-center gap-2">
-                {track.type === "video" && <Film size={14} className="text-cyan-400" />}
-                {track.type === "audio" && <Mic size={14} className="text-pink-400" />}
+                {track.type === "video" && <Film size={14} className="text-studio-accent" />}
+                {track.type === "audio" && <Mic size={14} className="text-amber-400" />}
                 {track.type === "sfx" && <Music size={14} className="text-emerald-400" />}
-                {track.type === "subtitle" && <Captions size={14} className="text-amber-400" />}
+                {track.type === "subtitle" && <Captions size={14} className="text-studio-muted" />}
                 <Text size="xs" fw={700} c="white" className="truncate">
                   {track.name}
                 </Text>
               </div>
 
-              <div className="flex-1 bg-dark-9 h-10 rounded-lg border border-studio-border/60 relative overflow-hidden flex items-center px-2">
+              <div className="flex-1 bg-studio-canvas h-10 rounded border border-studio-border/60 relative overflow-hidden flex items-center px-2">
                 {track.clips.map((clip) => (
                   <div
                     key={clip.id}
-                    className="bg-cyan-500/20 border border-cyan-500/40 rounded px-3 py-1 text-xs text-cyan-300 font-medium flex items-center gap-2"
+                    className="bg-studio-accent/20 border border-studio-accent/40 rounded px-3 py-1 text-xs text-studio-text font-mono flex items-center gap-2"
                   >
                     <span>{clip.title}</span>
-                    <span className="text-[10px] opacity-70">({clip.duration})</span>
+                    <span className="text-[10px] text-studio-muted font-mono">({clip.duration})</span>
                   </div>
                 ))}
               </div>

@@ -1,7 +1,7 @@
 "use client";
 
 import { Paper, Group, Stack, Text, Badge, ThemeIcon, Progress } from "@mantine/core";
-import { Cpu, Activity, Eye, CheckCircle2, ListChecks } from "lucide-react";
+import { Cpu, Activity } from "lucide-react";
 
 export function LeadDirectorConsole({
   phase = "Plan & Assess",
@@ -13,11 +13,11 @@ export function LeadDirectorConsole({
   status?: string;
 }) {
   return (
-    <Paper p="lg" radius="xl" withBorder className="bg-studio-card border-studio-border shadow-xl">
+    <Paper p="lg" radius="md" withBorder className="bg-studio-card border-studio-border">
       <Stack gap="md">
         <Group justify="space-between">
           <Group gap="md">
-            <ThemeIcon color="cyan" variant="light" size={40} radius="xl">
+            <ThemeIcon color="terracotta" variant="light" size={40} radius="sm">
               <Cpu size={20} />
             </ThemeIcon>
             <div>
@@ -30,24 +30,24 @@ export function LeadDirectorConsole({
             </div>
           </Group>
 
-          <Badge color="cyan" variant="dot" size="md">
+          <Badge color="terracotta" variant="dot" size="md">
             {status}
           </Badge>
         </Group>
 
-        <Paper p="sm" radius="lg" bg="dark.8" withBorder className="border-studio-border/60">
+        <Paper p="sm" radius="sm" className="bg-studio-panel border border-studio-border">
           <Group justify="space-between" mb="xs">
             <Group gap="xs">
-              <Activity size={14} className="text-cyan-400" />
-              <Text size="xs" fw={700} c="cyan.4">
+              <Activity size={14} className="text-studio-accent" />
+              <Text size="xs" fw={700} c="terracotta.4" className="font-mono">
                 Current Phase: {phase}
               </Text>
             </Group>
-            <Text size="xs" c="dimmed">
+            <Text size="xs" c="dimmed" className="font-mono">
               Step {stepCount} / 6
             </Text>
           </Group>
-          <Progress value={(stepCount / 6) * 100} color="cyan" size="sm" radius="xl" animated />
+          <Progress value={(stepCount / 6) * 100} color="terracotta" size="sm" radius="xs" />
         </Paper>
       </Stack>
     </Paper>

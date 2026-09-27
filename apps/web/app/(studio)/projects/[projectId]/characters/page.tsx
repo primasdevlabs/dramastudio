@@ -42,7 +42,7 @@ export default function CharacterStudioPage({ params }: { params: { projectId: s
       notifications.show({
         title: "Character Created",
         message: `Added character profile for ${c.name || name}`,
-        color: "pink",
+        color: "terracotta",
       });
     },
   });
@@ -50,10 +50,10 @@ export default function CharacterStudioPage({ params }: { params: { projectId: s
   return (
     <Stack gap="lg" className="max-w-7xl mx-auto">
       {/* Header */}
-      <Paper p="xl" radius="xl" withBorder className="bg-studio-card border-studio-border shadow-xl">
+      <Paper p="xl" radius="md" withBorder className="bg-studio-card border-studio-border">
         <Group justify="space-between" align="center">
           <Group gap="md">
-            <ThemeIcon color="pink" variant="light" size={44} radius="xl">
+            <ThemeIcon color="terracotta" variant="light" size={44} radius="md">
               <Users size={22} />
             </ThemeIcon>
             <div>
@@ -69,9 +69,10 @@ export default function CharacterStudioPage({ params }: { params: { projectId: s
           <Button
             onClick={() => setOpened(true)}
             leftSection={<Plus size={16} />}
-            variant="gradient"
-            gradient={{ from: "pink", to: "grape", deg: 90 }}
-            color="pink"
+            variant="filled"
+            color="terracotta"
+            size="sm"
+            radius="sm"
           >
             Add Character Profile
           </Button>
@@ -88,7 +89,7 @@ export default function CharacterStudioPage({ params }: { params: { projectId: s
           </Text>
         }
         centered
-        overlayProps={{ backgroundOpacity: 0.7, blur: 8 }}
+        overlayProps={{ backgroundOpacity: 0.7, blur: 4 }}
       >
         <Stack gap="md">
           <TextInput
@@ -125,7 +126,7 @@ export default function CharacterStudioPage({ params }: { params: { projectId: s
               onClick={() => createMutation.mutate()}
               loading={createMutation.isPending}
               disabled={!name}
-              color="pink"
+              color="terracotta"
             >
               Save Character
             </Button>
@@ -136,38 +137,38 @@ export default function CharacterStudioPage({ params }: { params: { projectId: s
       {/* Grid */}
       <SimpleGrid cols={{ base: 1, md: 2, lg: 3 }} spacing="lg">
         {isLoading ? (
-          [1, 2].map((i) => <Paper key={i} h={180} radius="lg" className="bg-studio-card animate-pulse" />)
+          [1, 2].map((i) => <Paper key={i} h={180} radius="md" className="bg-studio-card animate-pulse" />)
         ) : characters && characters.length > 0 ? (
           characters.map((c) => (
             <Card
               key={c.id}
               p="lg"
-              radius="lg"
+              radius="md"
               withBorder
-              className="bg-studio-card border-studio-border hover:border-pink-500/40 transition-all flex flex-col justify-between"
+              className="bg-studio-card border-studio-border hover:border-studio-accent/60 transition-all flex flex-col justify-between"
             >
               <Stack gap="sm">
                 <Group justify="space-between">
                   <Group gap="sm">
-                    <Avatar color="pink" radius="xl" size="md">
+                    <Avatar color="terracotta" radius="md" size="md">
                       {c.name.substring(0, 2).toUpperCase()}
                     </Avatar>
                     <div>
                       <Text fw={700} size="sm" c="white">
                         {c.name}
                       </Text>
-                      <Text size="xs" c="pink.4" fw={600}>
+                      <Text size="xs" c="terracotta.4" fw={600}>
                         {c.role}
                       </Text>
                     </div>
                   </Group>
 
-                  <Badge color="pink" variant="light" size="sm">
+                  <Badge color="terracotta" variant="light" size="sm" className="font-mono">
                     v{c.version || 1}
                   </Badge>
                 </Group>
 
-                <Paper p="xs" radius="md" bg="dark.7" withBorder className="border-studio-border/60">
+                <Paper p="xs" radius="sm" className="bg-studio-panel border border-studio-border">
                   <Text size="xs" c="dimmed" className="line-clamp-3">
                     {c.bio || "No backstory notes configured."}
                   </Text>
@@ -176,14 +177,14 @@ export default function CharacterStudioPage({ params }: { params: { projectId: s
 
               <Group justify="space-between" className="pt-3 border-t border-studio-border/60 mt-4">
                 <Group gap={4}>
-                  <Shirt size={14} className="text-pink-400" />
+                  <Shirt size={14} className="text-amber-400" />
                   <Text size="xs" c="dimmed">
                     Wardrobe Locked
                   </Text>
                 </Group>
                 <Group gap={4}>
                   <UserCheck size={14} className="text-emerald-400" />
-                  <Text size="xs" c="emerald.4" fw={600}>
+                  <Text size="xs" c="emerald.4" fw={600} className="font-mono">
                     Canon Reference
                   </Text>
                 </Group>
@@ -191,7 +192,7 @@ export default function CharacterStudioPage({ params }: { params: { projectId: s
             </Card>
           ))
         ) : (
-          <Paper p="xl" radius="xl" withBorder className="col-span-full bg-studio-card border-studio-border text-center">
+          <Paper p="xl" radius="md" withBorder className="col-span-full bg-studio-card border-studio-border text-center">
             <Text size="xs" c="dimmed">
               No characters created yet. Add a character to build your cast.
             </Text>

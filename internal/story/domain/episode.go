@@ -1,5 +1,6 @@
 package domain
 
+// EpisodeStatus is the episode-level state machine.
 type EpisodeStatus string
 
 const (
@@ -8,6 +9,7 @@ const (
 	EpisodeProducing  EpisodeStatus = "PRODUCING"
 	EpisodeValidating EpisodeStatus = "VALIDATING"
 	EpisodeCompleted  EpisodeStatus = "COMPLETED"
+	EpisodePublished  EpisodeStatus = "PUBLISHED"
 )
 
 type Episode struct {

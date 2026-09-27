@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
-import { Play, Pause, Maximize2, Sparkles } from "lucide-react";
+import { Play, Pause, Film } from "lucide-react";
 import { Paper, Group, ActionIcon, Badge, Text } from "@mantine/core";
 
 export function VerticalVideoPlayer({
@@ -29,9 +29,9 @@ export function VerticalVideoPlayer({
 
   return (
     <Paper
-      radius="xl"
+      radius="md"
       withBorder
-      className="relative overflow-hidden bg-black border-studio-border aspect-[9/16] w-full max-w-[280px] mx-auto shadow-2xl flex flex-col justify-between p-4"
+      className="relative overflow-hidden bg-black border-studio-border aspect-[9/16] w-full max-w-[280px] mx-auto shadow-2xl flex flex-col justify-between p-3"
     >
       {src ? (
         <video
@@ -43,46 +43,46 @@ export function VerticalVideoPlayer({
           playsInline
         />
       ) : (
-        <div className="absolute inset-0 bg-gradient-to-b from-slate-900 via-studio-card to-slate-950 flex flex-col items-center justify-center p-6 text-center space-y-3">
-          <div className="w-12 h-12 rounded-full bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400">
-            <Sparkles className="w-6 h-6" />
+        <div className="absolute inset-0 bg-studio-surface flex flex-col items-center justify-center p-6 text-center space-y-3">
+          <div className="w-10 h-10 rounded-sm bg-studio-panel border border-studio-border flex items-center justify-center text-studio-accent">
+            <Film className="w-5 h-5" />
           </div>
-          <Text size="xs" fw={700} c="cyan.4">
-            9:16 Vertical Render
+          <Text size="xs" fw={700} c="terracotta.6">
+            9:16 Vertical Monitor
           </Text>
           <Text size="xs" c="dimmed">
-            Wan 2.1 T2V Generation Pending
+            Generation: Wan 2.1 Video (T2V)
           </Text>
         </div>
       )}
 
       {/* Overlay Top Bar */}
       <Group justify="space-between" className="relative z-10">
-        <Badge color="cyan" variant="filled" size="xs">
+        <Badge color="terracotta" variant="filled" size="xs">
           9:16 VERTICAL
         </Badge>
-        <Badge color="emerald" variant="dot" size="xs">
+        <Badge color="green" variant="outline" size="xs">
           Wan 2.1 Ready
         </Badge>
       </Group>
 
-      {/* Overlay Bottom Bar Controls */}
-      <div className="relative z-10 space-y-2 bg-black/60 backdrop-blur-md p-3 rounded-xl border border-white/10">
+      {/* Overlay Bottom Technical Metadata Bar */}
+      <div className="relative z-10 space-y-2 bg-studio-surface/90 p-2.5 rounded-sm border border-studio-border">
         <Text size="xs" fw={700} c="white" className="truncate">
           {shotTitle}
         </Text>
         <Group justify="space-between" align="center">
           <ActionIcon
             variant="filled"
-            color="cyan"
-            radius="xl"
-            size="md"
+            color="terracotta"
+            radius="sm"
+            size="sm"
             onClick={togglePlay}
           >
-            {isPlaying ? <Pause size={16} /> : <Play size={16} />}
+            {isPlaying ? <Pause size={14} /> : <Play size={14} />}
           </ActionIcon>
-          <Text size="xs" c="dimmed">
-            00:05 / 1080x1920
+          <Text size="xs" c="dimmed" className="font-mono">
+            00:04.82 / 1080x1920
           </Text>
         </Group>
       </div>

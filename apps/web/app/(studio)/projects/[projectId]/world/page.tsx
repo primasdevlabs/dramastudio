@@ -50,10 +50,10 @@ export default function WorldStudioPage({ params }: { params: { projectId: strin
   return (
     <Stack gap="lg" className="max-w-7xl mx-auto">
       {/* Header */}
-      <Paper p="xl" radius="xl" withBorder className="bg-studio-card border-studio-border shadow-xl">
+      <Paper p="xl" radius="md" withBorder className="bg-studio-card border-studio-border">
         <Group justify="space-between" align="center">
           <Group gap="md">
-            <ThemeIcon color="emerald" variant="light" size={44} radius="xl">
+            <ThemeIcon color="emerald" variant="light" size={44} radius="md">
               <Globe size={22} />
             </ThemeIcon>
             <div>
@@ -69,9 +69,10 @@ export default function WorldStudioPage({ params }: { params: { projectId: strin
           <Button
             onClick={() => setOpened(true)}
             leftSection={<Plus size={16} />}
-            variant="gradient"
-            gradient={{ from: "emerald", to: "teal", deg: 90 }}
+            variant="filled"
             color="emerald"
+            size="sm"
+            radius="sm"
           >
             Add Production Location
           </Button>
@@ -88,7 +89,7 @@ export default function WorldStudioPage({ params }: { params: { projectId: strin
           </Text>
         }
         centered
-        overlayProps={{ backgroundOpacity: 0.7, blur: 8 }}
+        overlayProps={{ backgroundOpacity: 0.7, blur: 4 }}
       >
         <Stack gap="md">
           <TextInput
@@ -140,13 +141,13 @@ export default function WorldStudioPage({ params }: { params: { projectId: strin
       {/* Grid */}
       <SimpleGrid cols={{ base: 1, md: 2, lg: 3 }} spacing="lg">
         {isLoading ? (
-          [1, 2].map((i) => <Paper key={i} h={170} radius="lg" className="bg-studio-card animate-pulse" />)
+          [1, 2].map((i) => <Paper key={i} h={170} radius="md" className="bg-studio-card animate-pulse" />)
         ) : locations && locations.length > 0 ? (
           locations.map((loc) => (
             <Card
               key={loc.id}
               p="lg"
-              radius="lg"
+              radius="md"
               withBorder
               className="bg-studio-card border-studio-border hover:border-emerald-500/40 transition-all flex flex-col justify-between"
             >
@@ -164,7 +165,7 @@ export default function WorldStudioPage({ params }: { params: { projectId: strin
                   </Badge>
                 </Group>
 
-                <Paper p="xs" radius="md" bg="dark.7" withBorder className="border-studio-border/60">
+                <Paper p="xs" radius="sm" className="bg-studio-panel border border-studio-border">
                   <Text size="xs" c="dimmed" className="line-clamp-2">
                     {loc.description || "No visual layout description specified."}
                   </Text>
@@ -179,10 +180,10 @@ export default function WorldStudioPage({ params }: { params: { projectId: strin
                   <Badge color="amber" variant="subtle" size="xs" leftSection={<Sun size={10} />}>
                     Day
                   </Badge>
-                  <Badge color="indigo" variant="subtle" size="xs" leftSection={<Moon size={10} />}>
+                  <Badge color="gray" variant="subtle" size="xs" leftSection={<Moon size={10} />}>
                     Night
                   </Badge>
-                  <Badge color="cyan" variant="subtle" size="xs" leftSection={<CloudRain size={10} />}>
+                  <Badge color="gray" variant="subtle" size="xs" leftSection={<CloudRain size={10} />}>
                     Rain
                   </Badge>
                 </Group>
@@ -190,7 +191,7 @@ export default function WorldStudioPage({ params }: { params: { projectId: strin
             </Card>
           ))
         ) : (
-          <Paper p="xl" radius="xl" withBorder className="col-span-full bg-studio-card border-studio-border text-center">
+          <Paper p="xl" radius="md" withBorder className="col-span-full bg-studio-card border-studio-border text-center">
             <Text size="xs" c="dimmed">
               No locations registered yet. Add a location to set the scene.
             </Text>

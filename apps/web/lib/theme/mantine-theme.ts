@@ -1,55 +1,55 @@
 import { createTheme, MantineColorsTuple } from '@mantine/core'
 
 const studioDark: MantineColorsTuple = [
-  '#f1f5f9',
-  '#cbd5e1',
-  '#94a3b8',
-  '#64748b',
-  '#475569',
-  '#334155',
-  '#26334D',
-  '#1A2335',
-  '#111726',
-  '#090D16',
+  '#f2eee7',
+  '#d9d3c8',
+  '#a9a39a',
+  '#78736a',
+  '#524e47',
+  '#393631',
+  '#2d2b27',
+  '#24221f',
+  '#1c1b19',
+  '#151514',
 ]
 
-const cyanAccent: MantineColorsTuple = [
-  '#e0f7fa',
-  '#b2ebf2',
-  '#80deea',
-  '#4dd0e1',
-  '#26c6da',
-  '#00bcd4',
-  '#06B6D4',
-  '#0097a7',
-  '#00838f',
-  '#006064',
+const terracottaAccent: MantineColorsTuple = [
+  '#fbf2ee',
+  '#f5e0d7',
+  '#ecc0ae',
+  '#e29c81',
+  '#da7d59',
+  '#d4683f',
+  '#C56A45', // Primary Terracotta
+  '#8E3F25', // Dark Terracotta
+  '#74341e',
+  '#612c1b',
 ]
 
 export const studioTheme = createTheme({
-  primaryColor: 'cyan',
+  primaryColor: 'terracotta',
   primaryShade: 6,
   colors: {
     dark: studioDark,
-    cyan: cyanAccent,
+    terracotta: terracottaAccent,
   },
   fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
-  defaultRadius: 'md',
+  defaultRadius: 'sm',
   components: {
     Button: {
       defaultProps: {
-        radius: 'md',
+        radius: 'sm',
       },
     },
     Paper: {
       defaultProps: {
-        radius: 'lg',
+        radius: 'md',
         bg: 'dark.8',
       },
     },
     Card: {
       defaultProps: {
-        radius: 'lg',
+        radius: 'md',
         bg: 'dark.8',
         withBorder: true,
       },

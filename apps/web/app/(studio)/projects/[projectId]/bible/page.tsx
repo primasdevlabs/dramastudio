@@ -50,7 +50,7 @@ export default function SeriesBiblePage({ params }: { params: { projectId: strin
       notifications.show({
         title: "Bible Saved",
         message: "Series Bible updated to next canonical version",
-        color: "amber",
+        color: "terracotta",
       });
       setTimeout(() => setSavedSuccess(false), 3000);
     },
@@ -59,10 +59,10 @@ export default function SeriesBiblePage({ params }: { params: { projectId: strin
   return (
     <Stack gap="lg" className="max-w-5xl mx-auto">
       {/* Header */}
-      <Paper p="xl" radius="xl" withBorder className="bg-studio-card border-studio-border shadow-xl">
+      <Paper p="xl" radius="md" withBorder className="bg-studio-card border-studio-border">
         <Group justify="space-between" align="center">
           <Group gap="md">
-            <ThemeIcon color="amber" variant="light" size={44} radius="xl">
+            <ThemeIcon color="terracotta" variant="light" size={44} radius="md">
               <BookOpen size={22} />
             </ThemeIcon>
             <div>
@@ -71,7 +71,7 @@ export default function SeriesBiblePage({ params }: { params: { projectId: strin
                   Series Bible Workspace
                 </Title>
                 {bible && (
-                  <Badge color="amber" variant="light" size="sm">
+                  <Badge color="terracotta" variant="light" size="sm" className="font-mono">
                     Version {bible.version}
                   </Badge>
                 )}
@@ -86,9 +86,10 @@ export default function SeriesBiblePage({ params }: { params: { projectId: strin
             onClick={() => saveMutation.mutate()}
             loading={saveMutation.isPending}
             leftSection={<Save size={16} />}
-            variant="gradient"
-            gradient={{ from: "amber", to: "orange", deg: 90 }}
-            color="amber"
+            variant="filled"
+            color="terracotta"
+            size="sm"
+            radius="sm"
           >
             Save Bible Version
           </Button>
@@ -96,13 +97,13 @@ export default function SeriesBiblePage({ params }: { params: { projectId: strin
       </Paper>
 
       {savedSuccess && (
-        <Alert icon={<CheckCircle2 size={16} />} title="Canonical Version Updated" color="green">
+        <Alert icon={<CheckCircle2 size={16} />} title="Canonical Version Updated" color="emerald" radius="md">
           Series Bible successfully saved and updated to next canonical version!
         </Alert>
       )}
 
       {/* Editor Form */}
-      <Paper p="xl" radius="xl" withBorder className="bg-studio-card border-studio-border">
+      <Paper p="xl" radius="md" withBorder className="bg-studio-card border-studio-border">
         <Stack gap="lg">
           <Textarea
             label="Core Story Premise"

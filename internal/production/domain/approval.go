@@ -24,5 +24,5 @@ type ApprovalRequest struct {
 	Notes       string           `json:"notes"`
 	DecidedBy   string           `json:"decided_by"` // USER, LEAD_DIRECTOR, etc.
 	SubmittedAt time.Time        `json:"submitted_at"`
-	DecidedAt   time.Time        `json:"decided_at"`
+	DecidedAt   *time.Time       `json:"decided_at,omitempty"`
 }

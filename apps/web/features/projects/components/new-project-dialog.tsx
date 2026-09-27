@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, Sparkles } from "lucide-react";
+import { Plus, Clapperboard } from "lucide-react";
 import { Modal, Button, TextInput, Textarea, Select, Group, Stack, Text, ThemeIcon } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
 import { api } from "@/lib/api/client";
@@ -34,7 +34,7 @@ export function NewProjectDialog({ onCreated }: { onCreated?: (p: Project) => vo
       notifications.show({
         title: "Production Initialized",
         message: `Created series ${proj.name || name} successfully`,
-        color: "cyan",
+        color: "terracotta",
       });
       if (onCreated) onCreated(proj);
     } catch (err) {
@@ -54,11 +54,10 @@ export function NewProjectDialog({ onCreated }: { onCreated?: (p: Project) => vo
       <Button
         onClick={() => setOpened(true)}
         leftSection={<Plus size={16} />}
-        variant="gradient"
-        gradient={{ from: "cyan", to: "blue", deg: 90 }}
+        color="terracotta"
+        variant="filled"
         size="sm"
-        radius="md"
-        className="shadow-lg shadow-cyan-500/20"
+        radius="sm"
       >
         New Production
       </Button>
@@ -68,8 +67,8 @@ export function NewProjectDialog({ onCreated }: { onCreated?: (p: Project) => vo
         onClose={() => setOpened(false)}
         title={
           <Group gap="xs">
-            <ThemeIcon color="cyan" variant="light" size="lg" radius="md">
-              <Sparkles size={18} />
+            <ThemeIcon color="terracotta" variant="light" size="lg" radius="sm">
+              <Clapperboard size={18} />
             </ThemeIcon>
             <div>
               <Text fw={700} size="md" c="white">
@@ -83,7 +82,7 @@ export function NewProjectDialog({ onCreated }: { onCreated?: (p: Project) => vo
         }
         centered
         size="md"
-        overlayProps={{ backgroundOpacity: 0.7, blur: 8 }}
+        overlayProps={{ backgroundOpacity: 0.7, blur: 4 }}
       >
         <form onSubmit={handleSubmit}>
           <Stack gap="md" mt="sm">
@@ -136,7 +135,7 @@ export function NewProjectDialog({ onCreated }: { onCreated?: (p: Project) => vo
               <Button variant="subtle" color="gray" onClick={() => setOpened(false)}>
                 Cancel
               </Button>
-              <Button type="submit" loading={isSubmitting} color="cyan">
+              <Button type="submit" loading={isSubmitting} color="terracotta">
                 Initialize Production
               </Button>
             </Group>

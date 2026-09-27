@@ -6,9 +6,9 @@ export function Card({ className = "", children, ...props }: CardProps & { class
   return (
     <MantineCard
       p="lg"
-      radius="lg"
+      radius="md"
       withBorder
-      className={`bg-studio-card border-studio-border hover:border-cyan-500/40 transition-all ${className}`}
+      className={`bg-studio-card border-studio-border hover:border-studio-accent/40 transition-all ${className}`}
       {...props}
     >
       {children}

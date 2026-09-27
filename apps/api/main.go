@@ -33,6 +33,8 @@ import (
 	mediaInfra "dramastudio/internal/media/infrastructure/persistence"
 	mediaHTTP "dramastudio/internal/media/interfaces/http"
 
+	"dramastudio/internal/platform/security"
+
 	postApp "dramastudio/internal/postproduction/application/services"
 	postInfra "dramastudio/internal/postproduction/infrastructure/persistence"
 	postHTTP "dramastudio/internal/postproduction/interfaces/http"
@@ -61,7 +63,12 @@ import (
 func main() {
 	port := os.Getenv("PORT")
 	if port == "" {
-		port = "8080"
+		port = "9471"
+	}
+
+	jwtSecret := os.Getenv("JWT_SECRET")
+	if jwtSecret == "" {
+		jwtSecret = "dramastudio-local-dev-jwt-secret-key-32bytes"
 	}
 
 	// 1. Initialize Infrastructure Repositories
@@ -78,7 +85,9 @@ func main() {
 	postproductionRepo := postInfra.NewInMemoryPostproductionRepository()
 	publishingRepo := pubInfra.NewInMemoryPublishingRepository()
 
-	// 2. Initialize Application Services
+	// 2. Initialize Platform & Application Services
+	jwtService := security.NewJWTService(jwtSecret, "dramastudio", 24*time.Hour)
+
 	identitySvc := identApp.NewIdentityService(identityRepo)
 	projectsSvc := projApp.NewProjectService(projectsRepo)
 	storySvc := storyApp.NewStoryService(storyRepo)
@@ -93,7 +102,7 @@ func main() {
 	publishingSvc := pubApp.NewPublishingService(publishingRepo)
 
 	// 3. Initialize HTTP Handlers
-	identityHandler := identHTTP.NewIdentityHandler(identitySvc)
+	identityHandler := identHTTP.NewIdentityHandler(identitySvc, jwtService)
 	projectsHandler := projHTTP.NewProjectsHandler(projectsSvc)
 	storyHandler := storyHTTP.NewStoryHandler(storySvc)
 	canonHandler := canonHTTP.NewCanonHandler(canonSvc)
@@ -106,29 +115,27 @@ func main() {
 	postproductionHandler := postHTTP.NewPostproductionHandler(postproductionSvc)
 	publishingHandler := pubHTTP.NewPublishingHandler(publishingSvc)
 
-	// 4. Setup Router Mux
+	// 4. Setup Router Mux & Register Routes
 	mux := http.NewServeMux()
 
-	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("GET /health", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte(`{"status":"ok","system":"DramaStudio API","version":"1.0.0"}`))
 	})
 
-	mux.Handle("/v1/identity/", identityHandler)
-	mux.Handle("/v1/projects/", projectsHandler)
-	mux.Handle("/v1/projects", projectsHandler)
-	mux.Handle("/v1/story/", storyHandler)
-	mux.Handle("/v1/canon/", canonHandler)
-	mux.Handle("/v1/characters/", charactersHandler)
-	mux.Handle("/v1/characters", charactersHandler)
-	mux.Handle("/v1/world/", worldHandler)
-	mux.Handle("/v1/agents/", agentsHandler)
-	mux.Handle("/v1/production/", productionHandler)
-	mux.Handle("/v1/continuity/", continuityHandler)
-	mux.Handle("/v1/media/", mediaHandler)
-	mux.Handle("/v1/postproduction/", postproductionHandler)
-	mux.Handle("/v1/publishing/", publishingHandler)
+	identityHandler.RegisterRoutes(mux)
+	projectsHandler.RegisterRoutes(mux)
+	storyHandler.RegisterRoutes(mux)
+	canonHandler.RegisterRoutes(mux)
+	charactersHandler.RegisterRoutes(mux)
+	worldHandler.RegisterRoutes(mux)
+	agentsHandler.RegisterRoutes(mux)
+	productionHandler.RegisterRoutes(mux)
+	continuityHandler.RegisterRoutes(mux)
+	mediaHandler.RegisterRoutes(mux)
+	postproductionHandler.RegisterRoutes(mux)
+	publishingHandler.RegisterRoutes(mux)
 
 	server := &http.Server{
 		Addr:         ":" + port,

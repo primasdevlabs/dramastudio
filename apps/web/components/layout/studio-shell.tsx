@@ -50,32 +50,32 @@ export function StudioShell({
   const baseUrl = projectId ? `/projects/${projectId}` : "/projects";
 
   return (
-    <div className="flex h-screen overflow-hidden bg-studio-bg text-studio-text">
-      {/* Sidebar */}
+    <div className="flex h-screen overflow-hidden bg-studio-bg text-studio-text font-sans">
+      {/* Editorial Workstation Sidebar */}
       <aside
         className={`${
           isSidebarOpen ? "w-64" : "w-16"
         } transition-all duration-200 bg-studio-card border-r border-studio-border flex flex-col z-20`}
       >
-        {/* Logo & Toggle */}
-        <div className="h-16 flex items-center justify-between px-4 border-b border-studio-border">
+        {/* Header Logo */}
+        <div className="h-14 flex items-center justify-between px-4 border-b border-studio-border">
           <Link href="/projects" className="flex items-center gap-3 overflow-hidden">
-            <ThemeIcon variant="gradient" gradient={{ from: "cyan", to: "indigo" }} size="lg" radius="md">
-              <Clapperboard size={20} className="text-white" />
+            <ThemeIcon color="terracotta" variant="filled" size="md" radius="sm">
+              <Clapperboard size={18} className="text-white" />
             </ThemeIcon>
             {isSidebarOpen && (
-              <Text fw={800} size="lg" className="tracking-wider text-white">
-                DRAMA<span className="text-cyan-400">STUDIO</span>
+              <Text fw={800} size="md" className="tracking-wider text-white">
+                DRAMA<span className="text-studio-accent">STUDIO</span>
               </Text>
             )}
           </Link>
-          <ActionIcon variant="subtle" color="gray" onClick={toggleSidebar} radius="md" size="md">
-            <Menu size={18} />
+          <ActionIcon variant="subtle" color="gray" onClick={toggleSidebar} radius="sm" size="sm">
+            <Menu size={16} />
           </ActionIcon>
         </div>
 
         {/* Navigation Items */}
-        <div className="flex-1 py-4 overflow-y-auto px-2 space-y-1">
+        <div className="flex-1 py-3 overflow-y-auto px-2 space-y-1">
           {projectId && isSidebarOpen && (
             <Text size="xs" fw={700} c="dimmed" tt="uppercase" className="px-3 pb-2 tracking-wider">
               Production Workflow
@@ -96,13 +96,13 @@ export function StudioShell({
                     component={Link}
                     key={item.label}
                     href={fullPath}
-                    className={`flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                    className={`flex items-center gap-3 w-full px-3 py-2 rounded-md text-xs font-semibold transition-all ${
                       isActive
-                        ? "bg-cyan-500/10 text-cyan-400 border border-cyan-500/30"
+                        ? "bg-studio-panel text-studio-accent border border-studio-border"
                         : "text-studio-muted hover:text-studio-text hover:bg-studio-panel"
                     }`}
                   >
-                    <Icon size={18} className={`shrink-0 ${isActive ? "text-cyan-400" : ""}`} />
+                    <Icon size={16} className={`shrink-0 ${isActive ? "text-studio-accent" : ""}`} />
                     {isSidebarOpen && <span>{item.label}</span>}
                   </UnstyledButton>
                 );
@@ -119,9 +119,9 @@ export function StudioShell({
               <UnstyledButton
                 component={Link}
                 href="/projects"
-                className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm font-medium bg-cyan-500/10 text-cyan-400 border border-cyan-500/30"
+                className="flex items-center gap-3 w-full px-3 py-2 rounded-md text-xs font-semibold bg-studio-panel text-studio-accent border border-studio-border"
               >
-                <FolderPlus size={18} className="shrink-0 text-cyan-400" />
+                <FolderPlus size={16} className="shrink-0 text-studio-accent" />
                 {isSidebarOpen && <span>All Productions</span>}
               </UnstyledButton>
             )}
@@ -132,9 +132,9 @@ export function StudioShell({
           <UnstyledButton
             component={Link}
             href={projectId ? `/projects/${projectId}/settings` : "/settings"}
-            className="flex items-center gap-3 w-full px-3 py-2 rounded-lg text-sm font-medium text-studio-muted hover:text-studio-text hover:bg-studio-panel transition-colors"
+            className="flex items-center gap-3 w-full px-3 py-2 rounded-md text-xs font-medium text-studio-muted hover:text-studio-text hover:bg-studio-panel transition-colors"
           >
-            <Settings size={18} className="shrink-0" />
+            <Settings size={16} className="shrink-0" />
             {isSidebarOpen && <span>Studio Settings</span>}
           </UnstyledButton>
         </div>
@@ -142,24 +142,24 @@ export function StudioShell({
 
       {/* Main Workspace Area */}
       <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Studio Top Header */}
-        <header className="h-16 bg-studio-card border-b border-studio-border flex items-center justify-between px-6 z-10">
+        {/* Editorial Top Header */}
+        <header className="h-14 bg-studio-card border-b border-studio-border flex items-center justify-between px-6 z-10">
           <Group gap="md">
             <UnstyledButton
               onClick={toggleCommandPalette}
-              className="flex items-center gap-2 bg-studio-panel border border-studio-border px-3 py-1.5 rounded-lg text-xs text-studio-muted hover:text-studio-text hover:border-cyan-500/40 transition-all"
+              className="flex items-center gap-2 bg-studio-panel border border-studio-border px-3 py-1.5 rounded-md text-xs text-studio-muted hover:text-studio-text transition-all"
             >
-              <Search size={14} className="text-cyan-400" />
+              <Search size={14} className="text-studio-accent" />
               <span>Command Palette (Ctrl + K)</span>
             </UnstyledButton>
 
             {projectId && (
               <Group gap="xs">
                 <ChevronRight size={14} className="text-studio-muted" />
-                <Badge color="cyan" variant="light" size="sm">
+                <Badge color="terracotta" variant="outline" size="xs">
                   MONITORED MODE
                 </Badge>
-                <Badge color="emerald" variant="dot" size="sm">
+                <Badge color="green" variant="dot" size="xs">
                   Temporal Active
                 </Badge>
               </Group>
@@ -168,15 +168,15 @@ export function StudioShell({
 
           <Group gap="md">
             <Badge
-              leftSection={<Cpu size={12} className="text-cyan-400" />}
+              leftSection={<Cpu size={12} className="text-studio-accent" />}
               variant="outline"
               color="gray"
-              size="md"
-              radius="xl"
+              size="sm"
+              radius="sm"
             >
-              Wan 2.1 Video Engine
+              Provider: Wan 2.1 Video
             </Badge>
-            <ThemeIcon variant="gradient" gradient={{ from: "cyan", to: "indigo" }} size="md" radius="xl">
+            <ThemeIcon color="terracotta" variant="filled" size="sm" radius="sm">
               <Text size="xs" fw={700} c="white">
                 DS
               </Text>

@@ -1,11 +1,13 @@
 /**
  * DramaStudio Design System Tokens - Typography
- * Mono font is banned from the project — unified clean sans typography system.
+ * UI Typeface: Sans-serif (Geist / IBM Plex Sans / System)
+ * Technical Production Metadata: Monospace (IBM Plex Mono / SF Mono)
  */
 
 export const typography = {
   fontFamily: {
     sans: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+    mono: "'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
   },
   fontSize: {
     xs: "0.75rem",

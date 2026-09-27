@@ -1,11 +1,9 @@
 package http
 
 import (
-	"encoding/json"
 	"net/http"
-	"strings"
 
-	platformHTTP "dramastudio/internal/platform/http"
+	platformhttp "dramastudio/internal/platform/http"
 	"dramastudio/internal/world/application/services"
 )
 
@@ -18,44 +16,152 @@ func NewWorldHandler(service *services.WorldService) *WorldHandler {
 }
 
 type createLocationReq struct {
-	ProjectID   string `json:"project_id"`
 	Name        string `json:"name"`
+	Kind        string `json:"kind"`
 	Description string `json:"description"`
-	Type        string `json:"type"`
+	ParentID    string `json:"parent_id"`
 }
 
-func (h *WorldHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	path := strings.TrimPrefix(r.URL.Path, "/v1/world")
-	path = strings.TrimPrefix(path, "/")
+func (r *createLocationReq) Validate() error {
+	if r.Name == "" {
+		return &platformhttp.ValidationError{Fields: []platformhttp.FieldError{{Field: "name", Message: "required"}}}
+	}
+	return nil
+}
 
-	parts := strings.Split(path, "/")
-	if parts[0] == "locations" {
-		switch r.Method {
-		case http.MethodGet:
-			projectID := r.URL.Query().Get("project_id")
-			locs, err := h.service.ListLocations(r.Context(), projectID)
-			if err != nil {
-				platformHTTP.WriteError(w, http.StatusInternalServerError, "INTERNAL_ERROR", err.Error(), "", nil)
-				return
-			}
-			platformHTTP.WriteJSON(w, http.StatusOK, map[string]interface{}{"locations": locs})
-		case http.MethodPost:
-			var req createLocationReq
-			if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-				platformHTTP.WriteError(w, http.StatusBadRequest, "INVALID_INPUT", "Invalid payload", "", nil)
-				return
-			}
-			loc, err := h.service.CreateLocation(r.Context(), req.ProjectID, req.Name, req.Description, req.Type)
-			if err != nil {
-				platformHTTP.WriteError(w, http.StatusInternalServerError, "CREATE_FAILED", err.Error(), "", nil)
-				return
-			}
-			platformHTTP.WriteJSON(w, http.StatusCreated, loc)
-		default:
-			platformHTTP.WriteError(w, http.StatusMethodNotAllowed, "METHOD_NOT_ALLOWED", "Method not allowed", "", nil)
-		}
+type addVariantReq struct {
+	Name       string            `json:"name"`
+	Attributes map[string]string `json:"attributes"`
+}
+
+func (r *addVariantReq) Validate() error {
+	if r.Name == "" {
+		return &platformhttp.ValidationError{Fields: []platformhttp.FieldError{{Field: "name", Message: "required"}}}
+	}
+	return nil
+}
+
+type createPropReq struct {
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	LocationID  string `json:"location_id"`
+}
+
+func (r *createPropReq) Validate() error {
+	if r.Name == "" {
+		return &platformhttp.ValidationError{Fields: []platformhttp.FieldError{{Field: "name", Message: "required"}}}
+	}
+	return nil
+}
+
+type createRuleReq struct {
+	Text     string `json:"text"`
+	Category string `json:"category"`
+}
+
+func (r *createRuleReq) Validate() error {
+	if r.Text == "" {
+		return &platformhttp.ValidationError{Fields: []platformhttp.FieldError{{Field: "text", Message: "required"}}}
+	}
+	return nil
+}
+
+func (h *WorldHandler) RegisterRoutes(mux *http.ServeMux) {
+	mux.HandleFunc("GET /v1/projects/{projectId}/world/locations", h.listLocations)
+	mux.HandleFunc("POST /v1/projects/{projectId}/world/locations", h.createLocation)
+	mux.HandleFunc("GET /v1/projects/{projectId}/world/locations/{locationId}", h.getLocation)
+	mux.HandleFunc("POST /v1/projects/{projectId}/world/locations/{locationId}/variants", h.addVariant)
+	mux.HandleFunc("GET /v1/projects/{projectId}/world/props", h.listProps)
+	mux.HandleFunc("POST /v1/projects/{projectId}/world/props", h.createProp)
+	mux.HandleFunc("GET /v1/projects/{projectId}/world/rules", h.listRules)
+	mux.HandleFunc("POST /v1/projects/{projectId}/world/rules", h.createRule)
+}
+
+func (h *WorldHandler) listLocations(w http.ResponseWriter, r *http.Request) {
+	locs, err := h.service.ListLocations(r.Context(), r.PathValue("projectId"))
+	if err != nil {
+		platformhttp.WriteErrorFrom(w, r, err)
 		return
 	}
+	platformhttp.WriteJSON(w, http.StatusOK, map[string]interface{}{"items": locs})
+}
 
-	platformHTTP.WriteError(w, http.StatusNotFound, "NOT_FOUND", "Endpoint not found", "", nil)
+func (h *WorldHandler) createLocation(w http.ResponseWriter, r *http.Request) {
+	var req createLocationReq
+	if !platformhttp.DecodeAndValidate(w, r, &req) {
+		return
+	}
+	loc, err := h.service.CreateLocation(r.Context(), r.PathValue("projectId"),
+		req.Name, req.Kind, req.Description, req.ParentID)
+	if err != nil {
+		platformhttp.WriteErrorFrom(w, r, err)
+		return
+	}
+	platformhttp.WriteJSON(w, http.StatusCreated, loc)
+}
+
+func (h *WorldHandler) getLocation(w http.ResponseWriter, r *http.Request) {
+	loc, err := h.service.GetLocation(r.Context(), r.PathValue("locationId"))
+	if err != nil {
+		platformhttp.WriteError(w, http.StatusNotFound, "LOCATION_NOT_FOUND", "Location not found", platformhttp.RequestIDFrom(r), nil)
+		return
+	}
+	platformhttp.WriteJSON(w, http.StatusOK, loc)
+}
+
+func (h *WorldHandler) addVariant(w http.ResponseWriter, r *http.Request) {
+	var req addVariantReq
+	if !platformhttp.DecodeAndValidate(w, r, &req) {
+		return
+	}
+	loc, err := h.service.AddVariant(r.Context(), r.PathValue("locationId"), req.Name, req.Attributes)
+	if err != nil {
+		platformhttp.WriteErrorFrom(w, r, err)
+		return
+	}
+	platformhttp.WriteJSON(w, http.StatusCreated, loc)
+}
+
+func (h *WorldHandler) listProps(w http.ResponseWriter, r *http.Request) {
+	props, err := h.service.ListProps(r.Context(), r.PathValue("projectId"))
+	if err != nil {
+		platformhttp.WriteErrorFrom(w, r, err)
+		return
+	}
+	platformhttp.WriteJSON(w, http.StatusOK, map[string]interface{}{"items": props})
+}
+
+func (h *WorldHandler) createProp(w http.ResponseWriter, r *http.Request) {
+	var req createPropReq
+	if !platformhttp.DecodeAndValidate(w, r, &req) {
+		return
+	}
+	p, err := h.service.CreateProp(r.Context(), r.PathValue("projectId"), req.Name, req.Description, req.LocationID)
+	if err != nil {
+		platformhttp.WriteErrorFrom(w, r, err)
+		return
+	}
+	platformhttp.WriteJSON(w, http.StatusCreated, p)
+}
+
+func (h *WorldHandler) listRules(w http.ResponseWriter, r *http.Request) {
+	rules, err := h.service.ListWorldRules(r.Context(), r.PathValue("projectId"))
+	if err != nil {
+		platformhttp.WriteErrorFrom(w, r, err)
+		return
+	}
+	platformhttp.WriteJSON(w, http.StatusOK, map[string]interface{}{"items": rules})
+}
+
+func (h *WorldHandler) createRule(w http.ResponseWriter, r *http.Request) {
+	var req createRuleReq
+	if !platformhttp.DecodeAndValidate(w, r, &req) {
+		return
+	}
+	rule, err := h.service.CreateWorldRule(r.Context(), r.PathValue("projectId"), req.Text, req.Category)
+	if err != nil {
+		platformhttp.WriteErrorFrom(w, r, err)
+		return
+	}
+	platformhttp.WriteJSON(w, http.StatusCreated, rule)
 }

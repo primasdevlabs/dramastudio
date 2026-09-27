@@ -43,7 +43,7 @@ export default function CanonPage({ params }: { params: { projectId: string } })
       notifications.show({
         title: "Fact Established",
         message: `Added canonical story fact: ${fact.subject || subject} ${fact.predicate || predicate} ${fact.object || object}`,
-        color: "cyan",
+        color: "terracotta",
       });
     },
   });
@@ -51,10 +51,10 @@ export default function CanonPage({ params }: { params: { projectId: string } })
   return (
     <Stack gap="lg" className="max-w-7xl mx-auto">
       {/* Header */}
-      <Paper p="xl" radius="xl" withBorder className="bg-studio-card border-studio-border shadow-xl">
+      <Paper p="xl" radius="md" withBorder className="bg-studio-card border-studio-border">
         <Group justify="space-between" align="center">
           <Group gap="md">
-            <ThemeIcon color="cyan" variant="light" size={44} radius="xl">
+            <ThemeIcon color="terracotta" variant="light" size={44} radius="md">
               <ShieldCheck size={22} />
             </ThemeIcon>
             <div>
@@ -70,9 +70,10 @@ export default function CanonPage({ params }: { params: { projectId: string } })
           <Button
             onClick={() => setOpened(true)}
             leftSection={<Plus size={16} />}
-            variant="gradient"
-            gradient={{ from: "cyan", to: "blue", deg: 90 }}
-            color="cyan"
+            variant="filled"
+            color="terracotta"
+            size="sm"
+            radius="sm"
           >
             Add Canonical Fact
           </Button>
@@ -89,7 +90,7 @@ export default function CanonPage({ params }: { params: { projectId: string } })
           </Text>
         }
         centered
-        overlayProps={{ backgroundOpacity: 0.7, blur: 8 }}
+        overlayProps={{ backgroundOpacity: 0.7, blur: 4 }}
       >
         <Stack gap="md">
           <TextInput
@@ -126,7 +127,7 @@ export default function CanonPage({ params }: { params: { projectId: string } })
               onClick={() => createMutation.mutate()}
               loading={createMutation.isPending}
               disabled={!subject || !object}
-              color="cyan"
+              color="terracotta"
             >
               Establish Fact
             </Button>
@@ -135,7 +136,7 @@ export default function CanonPage({ params }: { params: { projectId: string } })
       </Modal>
 
       {/* Facts Table */}
-      <Paper radius="xl" withBorder className="bg-studio-card border-studio-border overflow-hidden shadow-xl">
+      <Paper radius="md" withBorder className="bg-studio-card border-studio-border overflow-hidden">
         <Table verticalSpacing="sm" horizontalSpacing="lg">
           <Table.Thead className="bg-studio-panel">
             <Table.Tr>
@@ -161,24 +162,24 @@ export default function CanonPage({ params }: { params: { projectId: string } })
                   <Table.Td fw={700} c="white">
                     {fact.subject}
                   </Table.Td>
-                  <Table.Td className="font-semibold text-cyan-400">
+                  <Table.Td className="font-mono text-studio-accent font-semibold">
                     {fact.predicate}
                   </Table.Td>
                   <Table.Td fw={600} c="white">
                     {fact.object}
                   </Table.Td>
-                  <Table.Td c="dimmed">{fact.introduced || "Episode 1"}</Table.Td>
+                  <Table.Td c="dimmed" className="font-mono">{fact.introduced || "Episode 1"}</Table.Td>
                   <Table.Td>
                     {fact.status === "canonical" ? (
-                      <Badge color="emerald" variant="light" size="sm" leftSection={<CheckCircle2 size={12} />}>
+                      <Badge color="emerald" variant="light" size="sm" className="font-mono" leftSection={<CheckCircle2 size={12} />}>
                         Canonical
                       </Badge>
                     ) : fact.status === "disputed" ? (
-                      <Badge color="amber" variant="light" size="sm" leftSection={<AlertTriangle size={12} />}>
+                      <Badge color="amber" variant="light" size="sm" className="font-mono" leftSection={<AlertTriangle size={12} />}>
                         Disputed
                       </Badge>
                     ) : (
-                      <Badge color="red" variant="light" size="sm" leftSection={<XCircle size={12} />}>
+                      <Badge color="red" variant="light" size="sm" className="font-mono" leftSection={<XCircle size={12} />}>
                         Retconned
                       </Badge>
                     )}

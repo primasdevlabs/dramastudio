@@ -13,10 +13,10 @@ export function AgentStatusCard({
   status?: "idle" | "working" | "completed";
 }) {
   return (
-    <Paper p="md" radius="lg" withBorder className="bg-studio-panel border-studio-border">
+    <Paper p="md" radius="md" withBorder className="bg-studio-panel border-studio-border">
       <Group justify="space-between">
         <Group gap="sm">
-          <ThemeIcon color={status === "working" ? "cyan" : "gray"} variant="light" size="md" radius="md">
+          <ThemeIcon color={status === "working" ? "terracotta" : "gray"} variant="light" size="md" radius="sm">
             <Bot size={16} />
           </ThemeIcon>
           <div>
@@ -30,9 +30,10 @@ export function AgentStatusCard({
         </Group>
 
         <Badge
-          color={status === "working" ? "cyan" : status === "completed" ? "emerald" : "gray"}
+          color={status === "working" ? "terracotta" : status === "completed" ? "emerald" : "gray"}
           variant="light"
           size="xs"
+          className="font-mono"
         >
           {status.toUpperCase()}
         </Badge>

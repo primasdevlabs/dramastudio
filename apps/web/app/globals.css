@@ -3,22 +3,22 @@
 @import "@mantine/notifications/styles.css";
 
 @theme {
-  --color-studio-bg: #090D16;
-  --color-studio-card: #111726;
-  --color-studio-panel: #1A2335;
-  --color-studio-border: #26334D;
-  --color-studio-accent: #06B6D4;
-  --color-studio-violet: #8B5CF6;
-  --color-studio-pink: #EC4899;
-  --color-studio-amber: #F59E0B;
-  --color-studio-green: #10B981;
-  --color-studio-text: #F1F5F9;
-  --color-studio-muted: #94A3B8;
+  --color-studio-bg: #151514;
+  --color-studio-card: #1C1B19;
+  --color-studio-panel: #24221F;
+  --color-studio-border: #393631;
+  --color-studio-accent: #C56A45;
+  --color-studio-accent-dark: #8E3F25;
+  --color-studio-green: #6C9A76;
+  --color-studio-amber: #C18A45;
+  --color-studio-red: #C65A50;
+  --color-studio-text: #F2EEE7;
+  --color-studio-muted: #A9A39A;
 }
 
 :root {
-  --background: #090D16;
-  --foreground: #F1F5F9;
+  --background: #151514;
+  --foreground: #F2EEE7;
 }
 
 body {
@@ -28,16 +28,13 @@ body {
   overflow-x: hidden;
 }
 
-.glass-panel {
-  background: rgba(17, 23, 38, 0.75);
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(38, 51, 77, 0.6);
+/* Professional solid surfaces — no fake glassmorphism or gradients */
+.studio-surface {
+  background: #1C1B19;
+  border: 1px solid #393631;
 }
 
-.glow-cyan {
-  box-shadow: 0 0 20px rgba(6, 182, 212, 0.25);
-}
-
-.glow-violet {
-  box-shadow: 0 0 20px rgba(139, 92, 246, 0.25);
+.studio-surface-raised {
+  background: #24221F;
+  border: 1px solid #393631;
 }

@@ -4,21 +4,32 @@ import { Button as MantineButton, ButtonProps as MantineButtonProps } from "@man
 import { forwardRef } from "react";
 
 export interface StudioButtonProps extends MantineButtonProps {
-  glow?: "cyan" | "amber" | "emerald" | "none";
+  variant?: "primary" | "secondary" | "subtle" | "destructive";
 }
 
 export const Button = forwardRef<HTMLButtonElement, StudioButtonProps>(
-  ({ glow = "none", className = "", children, ...props }, ref) => {
-    let glowClass = "";
-    if (glow === "cyan") glowClass = "shadow-lg shadow-cyan-500/20";
-    if (glow === "amber") glowClass = "shadow-lg shadow-amber-500/20";
-    if (glow === "emerald") glowClass = "shadow-lg shadow-emerald-500/20";
+  ({ variant = "primary", className = "", children, ...props }, ref) => {
+    let color = "terracotta";
+    let mantineVariant: MantineButtonProps["variant"] = "filled";
+
+    if (variant === "secondary") {
+      mantineVariant = "outline";
+      color = "gray";
+    } else if (variant === "subtle") {
+      mantineVariant = "subtle";
+      color = "gray";
+    } else if (variant === "destructive") {
+      mantineVariant = "filled";
+      color = "red";
+    }
 
     return (
       <MantineButton
         ref={ref}
-        radius="md"
-        className={`${glowClass} ${className}`}
+        radius="sm"
+        color={color}
+        variant={mantineVariant}
+        className={`font-semibold text-xs tracking-wide ${className}`}
         {...props}
       >
         {children}

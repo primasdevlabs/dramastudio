@@ -79,22 +79,20 @@ func (h *ProjectsHandler) createProject(w http.ResponseWriter, r *http.Request) 
 		platformhttp.WriteErrorFrom(w, r, err)
 		return
 	}
-	if req.Settings != (domain.Settings{}) || req.Policy != (domain.ProductionPolicy{}) || req.Budget.TotalBudget > 0 {
-		proj, err = h.service.UpdateProject(r.Context(), proj.ID, func(p *domain.Project) error {
-			p.Settings = req.Settings
-			p.Policy = req.Policy
-			if req.Budget.TotalBudget > 0 || req.Budget.MaxCostPerGeneration > 0 {
-				p.Budget = req.Budget
-				if p.Budget.Currency == "" {
-					p.Budget.Currency = "USD"
-				}
+	proj, err = h.service.UpdateProject(r.Context(), proj.ID, func(p *domain.Project) error {
+		p.Settings = req.Settings
+		p.Policy = req.Policy
+		if req.Budget.TotalBudget > 0 || req.Budget.MaxCostPerGeneration > 0 {
+			p.Budget = req.Budget
+			if p.Budget.Currency == "" {
+				p.Budget.Currency = "USD"
 			}
-			return nil
-		})
-		if err != nil {
-			platformhttp.WriteErrorFrom(w, r, err)
-			return
 		}
+		return nil
+	})
+	if err != nil {
+		platformhttp.WriteErrorFrom(w, r, err)
+		return
 	}
 	platformhttp.WriteJSON(w, http.StatusCreated, proj)
 }

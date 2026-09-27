@@ -21,12 +21,12 @@ export const radius = {
 
 export const shadows = {
   card: "0 10px 30px -10px rgba(0, 0, 0, 0.5)",
-  glowCyan: "0 0 20px rgba(6, 182, 212, 0.25)",
-  glowAmber: "0 0 20px rgba(245, 158, 11, 0.25)",
-  glowEmerald: "0 0 20px rgba(16, 185, 129, 0.25)",
+  panel: "0 2px 8px rgba(0, 0, 0, 0.4)",
+  dropdown: "0 4px 16px rgba(0, 0, 0, 0.5)",
 } as const;
 
 export const motion = {
   transitionFast: "all 150ms cubic-bezier(0.4, 0, 0.2, 1)",
   transitionNormal: "all 250ms cubic-bezier(0.4, 0, 0.2, 1)",
 } as const;
+

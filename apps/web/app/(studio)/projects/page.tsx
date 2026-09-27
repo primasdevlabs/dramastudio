@@ -22,11 +22,11 @@ export default function ProjectsPage() {
   return (
     <Stack gap="lg" className="max-w-7xl mx-auto">
       {/* Header Banner */}
-      <Paper p="xl" radius="xl" withBorder className="bg-studio-card border-studio-border shadow-xl">
+      <Paper p="xl" radius="md" withBorder className="bg-studio-card border-studio-border">
         <Group justify="space-between" align="center">
           <Stack gap={4}>
             <Group gap="xs">
-              <Badge color="cyan" variant="light" size="sm">
+              <Badge color="terracotta" variant="light" size="sm" className="font-mono">
                 Control Tower
               </Badge>
             </Group>
@@ -45,7 +45,7 @@ export default function ProjectsPage() {
       {isLoading ? (
         <SimpleGrid cols={{ base: 1, md: 2, lg: 3 }} spacing="lg">
           {[1, 2, 3].map((i) => (
-            <Skeleton key={i} height={180} radius="lg" />
+            <Skeleton key={i} height={180} radius="md" />
           ))}
         </SimpleGrid>
       ) : error ? (
@@ -59,9 +59,9 @@ export default function ProjectsPage() {
           ))}
         </SimpleGrid>
       ) : (
-        <Paper p="xl" radius="xl" withBorder className="bg-studio-card border-studio-border text-center max-w-md mx-auto">
+        <Paper p="xl" radius="md" withBorder className="bg-studio-card border-studio-border text-center max-w-md mx-auto">
           <Stack align="center" gap="md">
-            <ThemeIcon variant="light" color="cyan" size={48} radius="xl">
+            <ThemeIcon variant="light" color="terracotta" size={48} radius="md">
               <FolderPlus size={24} />
             </ThemeIcon>
             <div>

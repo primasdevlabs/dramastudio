@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Share2, Send, CheckCircle2, Tv, Film } from "lucide-react";
+import { Share2, Send, CheckCircle2 } from "lucide-react";
 import { api } from "@/lib/api/client";
 import { Publication } from "@/lib/api/types";
 
@@ -43,9 +43,9 @@ export default function PublishingPage({ params }: { params: { projectId: string
   return (
     <div className="max-w-7xl mx-auto space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between bg-studio-card border border-studio-border p-6 rounded-2xl shadow-xl">
+      <div className="flex items-center justify-between bg-studio-card border border-studio-border p-6 rounded-md">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-500/30 flex items-center justify-center text-blue-400">
+          <div className="w-10 h-10 rounded bg-studio-accent/10 border border-studio-accent/20 flex items-center justify-center text-studio-accent">
             <Share2 className="w-5 h-5" />
           </div>
           <div>
@@ -56,14 +56,14 @@ export default function PublishingPage({ params }: { params: { projectId: string
       </div>
 
       {published && (
-        <div className="bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 p-4 rounded-xl text-xs font-semibold flex items-center gap-2">
+        <div className="bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 p-4 rounded text-xs font-mono flex items-center gap-2">
           <CheckCircle2 className="w-4 h-4" />
           Episode successfully published to {channel.toUpperCase()}!
         </div>
       )}
 
       {/* Publishing Form */}
-      <div className="bg-studio-card border border-studio-border rounded-2xl p-6 space-y-4 max-w-2xl">
+      <div className="bg-studio-card border border-studio-border rounded-md p-6 space-y-4 max-w-2xl">
         <h2 className="text-base font-bold text-white">Publish Episode 01</h2>
 
         <div>
@@ -71,7 +71,7 @@ export default function PublishingPage({ params }: { params: { projectId: string
           <select
             value={channel}
             onChange={(e) => setChannel(e.target.value)}
-            className="w-full bg-studio-panel border border-studio-border rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-400"
+            className="w-full bg-studio-panel border border-studio-border rounded px-3 py-2 text-xs text-white focus:outline-none focus:border-studio-accent font-mono"
           >
             <option value="tiktok_channel_1">TikTok Official Channel</option>
             <option value="instagram_reels_1">Instagram Reels Channel</option>
@@ -85,7 +85,7 @@ export default function PublishingPage({ params }: { params: { projectId: string
             type="text"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            className="w-full bg-studio-panel border border-studio-border rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-400"
+            className="w-full bg-studio-panel border border-studio-border rounded px-3 py-2 text-xs text-white focus:outline-none focus:border-studio-accent"
           />
         </div>
 
@@ -95,14 +95,14 @@ export default function PublishingPage({ params }: { params: { projectId: string
             rows={3}
             value={caption}
             onChange={(e) => setCaption(e.target.value)}
-            className="w-full bg-studio-panel border border-studio-border rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-400 resize-none"
+            className="w-full bg-studio-panel border border-studio-border rounded px-3 py-2 text-xs text-white focus:outline-none focus:border-studio-accent resize-none"
           />
         </div>
 
         <button
           onClick={() => publishMutation.mutate()}
           disabled={publishMutation.isPending}
-          className="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-400 hover:to-indigo-500 text-white font-bold text-xs px-6 py-2.5 rounded-lg shadow-lg shadow-blue-500/20 transition-all"
+          className="inline-flex items-center justify-center gap-2 bg-studio-accent hover:bg-studio-accent-dark text-white font-medium text-xs px-6 py-2.5 rounded transition-colors"
         >
           <Send className="w-4 h-4" />
           {publishMutation.isPending ? "Publishing..." : "Publish Episode Now"}
@@ -110,17 +110,17 @@ export default function PublishingPage({ params }: { params: { projectId: string
       </div>
 
       {/* Publications History Table */}
-      <div className="bg-studio-card border border-studio-border rounded-2xl p-5 space-y-3">
+      <div className="bg-studio-card border border-studio-border rounded-md p-5 space-y-3">
         <h3 className="text-sm font-bold text-white">Publication History</h3>
         {publications && publications.length > 0 ? (
           <div className="space-y-2">
             {publications.map((p) => (
-              <div key={p.id} className="bg-studio-panel border border-studio-border p-3.5 rounded-xl flex items-center justify-between text-xs">
+              <div key={p.id} className="bg-studio-panel border border-studio-border p-3.5 rounded flex items-center justify-between text-xs">
                 <div>
                   <span className="font-bold text-white">{p.metadata?.title}</span>
                   <p className="text-studio-muted mt-0.5">{p.metadata?.caption}</p>
                 </div>
-                <span className="px-2.5 py-0.5 rounded bg-blue-500/10 text-blue-400 font-semibold border border-blue-500/20">
+                <span className="px-2.5 py-0.5 rounded bg-studio-panel text-studio-accent font-mono border border-studio-border">
                   {p.channel_id}
                 </span>
               </div>

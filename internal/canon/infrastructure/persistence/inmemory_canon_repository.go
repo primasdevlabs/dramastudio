@@ -2,7 +2,6 @@ package persistence
 
 import (
 	"context"
-	"fmt"
 	"sync"
 
 	"dramastudio/internal/canon/domain"
@@ -12,61 +11,104 @@ type InMemoryCanonRepository struct {
 	mu        sync.RWMutex
 	facts     map[string]*domain.StoryFact
 	knowledge map[string]*domain.KnowledgeState
+	rules     map[string]*domain.CanonRule
+	versions  map[string]map[int][]byte
 }
 
 func NewInMemoryCanonRepository() *InMemoryCanonRepository {
 	return &InMemoryCanonRepository{
 		facts:     make(map[string]*domain.StoryFact),
 		knowledge: make(map[string]*domain.KnowledgeState),
+		rules:     make(map[string]*domain.CanonRule),
+		versions:  make(map[string]map[int][]byte),
 	}
 }
 
-func (r *InMemoryCanonRepository) FindFactByID(ctx context.Context, id string) (*domain.StoryFact, error) {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
-	fact, ok := r.facts[id]
-	if !ok {
-		return nil, fmt.Errorf("fact not found: %s", id)
-	}
-	return fact, nil
+func (r *InMemoryCanonRepository) SaveFact(_ context.Context, f *domain.StoryFact) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.facts[f.ID] = f
+	return nil
 }
 
-func (r *InMemoryCanonRepository) ListFacts(ctx context.Context, projectID string) ([]*domain.StoryFact, error) {
+func (r *InMemoryCanonRepository) FindFactByID(_ context.Context, id string) (*domain.StoryFact, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-	res := make([]*domain.StoryFact, 0, len(r.facts))
+	if f, ok := r.facts[id]; ok {
+		return f, nil
+	}
+	return nil, domain.ErrFactNotFound
+}
+
+func (r *InMemoryCanonRepository) ListFacts(_ context.Context, projectID string) ([]*domain.StoryFact, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	out := make([]*domain.StoryFact, 0)
 	for _, f := range r.facts {
-		res = append(res, f)
+		if f.ProjectID == projectID {
+			out = append(out, f)
+		}
 	}
-	return res, nil
+	return out, nil
 }
 
-func (r *InMemoryCanonRepository) SaveFact(ctx context.Context, fact *domain.StoryFact) error {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	r.facts[fact.ID] = fact
-	return nil
-}
-
-func (r *InMemoryCanonRepository) GetKnowledgeState(ctx context.Context, characterID, episodeID string) (*domain.KnowledgeState, error) {
+func (r *InMemoryCanonRepository) ListFactsForEntity(_ context.Context, projectID, entityID string) ([]*domain.StoryFact, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-	key := fmt.Sprintf("%s:%s", characterID, episodeID)
-	ks, ok := r.knowledge[key]
-	if !ok {
-		return &domain.KnowledgeState{
-			CharacterID: characterID,
-			EpisodeID:   episodeID,
-			KnownFactIDs: []string{},
-		}, nil
+	out := make([]*domain.StoryFact, 0)
+	for _, f := range r.facts {
+		if f.ProjectID == projectID && (f.EntityID == entityID || f.Subject == entityID) {
+			out = append(out, f)
+		}
 	}
-	return ks, nil
+	return out, nil
 }
 
-func (r *InMemoryCanonRepository) SaveKnowledgeState(ctx context.Context, ks *domain.KnowledgeState) error {
+func (r *InMemoryCanonRepository) SaveFactVersion(_ context.Context, factID string, version int, value []byte) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	key := fmt.Sprintf("%s:%s", ks.CharacterID, ks.EpisodeID)
-	r.knowledge[key] = ks
+	if r.versions[factID] == nil {
+		r.versions[factID] = make(map[int][]byte)
+	}
+	r.versions[factID][version] = value
 	return nil
+}
+
+func knowledgeKey(characterID, episodeID string) string {
+	return characterID + "|" + episodeID
+}
+
+func (r *InMemoryCanonRepository) GetKnowledgeState(_ context.Context, characterID, episodeID string) (*domain.KnowledgeState, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	if ks, ok := r.knowledge[knowledgeKey(characterID, episodeID)]; ok {
+		return ks, nil
+	}
+	return nil, domain.ErrKnowledgeMissing
+}
+
+func (r *InMemoryCanonRepository) SaveKnowledgeState(_ context.Context, ks *domain.KnowledgeState) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.knowledge[knowledgeKey(ks.CharacterID, ks.EpisodeID)] = ks
+	return nil
+}
+
+func (r *InMemoryCanonRepository) SaveRule(_ context.Context, rule *domain.CanonRule) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.rules[rule.ID] = rule
+	return nil
+}
+
+func (r *InMemoryCanonRepository) ListRules(_ context.Context, projectID string) ([]*domain.CanonRule, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	out := make([]*domain.CanonRule, 0)
+	for _, rule := range r.rules {
+		if rule.ProjectID == projectID {
+			out = append(out, rule)
+		}
+	}
+	return out, nil
 }

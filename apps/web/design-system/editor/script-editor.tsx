@@ -23,12 +23,12 @@ export function ScriptEditor({
   if (!editor) return null;
 
   return (
-    <Paper p="sm" radius="lg" withBorder className="bg-studio-panel border-studio-border">
+    <Paper p="sm" radius="md" withBorder className="bg-studio-panel border-studio-border">
       <Group gap="xs" mb="xs" pb="xs" className="border-b border-studio-border">
         <Tooltip label="Bold" withArrow>
           <ActionIcon
             variant={editor.isActive("bold") ? "filled" : "subtle"}
-            color="cyan"
+            color={editor.isActive("bold") ? "terracotta" : "gray"}
             size="sm"
             onClick={() => editor.chain().focus().toggleBold().run()}
           >
@@ -39,7 +39,7 @@ export function ScriptEditor({
         <Tooltip label="Italic" withArrow>
           <ActionIcon
             variant={editor.isActive("italic") ? "filled" : "subtle"}
-            color="cyan"
+            color={editor.isActive("italic") ? "terracotta" : "gray"}
             size="sm"
             onClick={() => editor.chain().focus().toggleItalic().run()}
           >
@@ -50,7 +50,7 @@ export function ScriptEditor({
         <Tooltip label="Scene Heading (H1)" withArrow>
           <ActionIcon
             variant={editor.isActive("heading", { level: 1 }) ? "filled" : "subtle"}
-            color="cyan"
+            color={editor.isActive("heading", { level: 1 }) ? "terracotta" : "gray"}
             size="sm"
             onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
           >
@@ -61,7 +61,7 @@ export function ScriptEditor({
         <Tooltip label="Action Heading (H2)" withArrow>
           <ActionIcon
             variant={editor.isActive("heading", { level: 2 }) ? "filled" : "subtle"}
-            color="cyan"
+            color={editor.isActive("heading", { level: 2 }) ? "terracotta" : "gray"}
             size="sm"
             onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
           >
@@ -72,7 +72,7 @@ export function ScriptEditor({
         <Tooltip label="Bullet List" withArrow>
           <ActionIcon
             variant={editor.isActive("bulletList") ? "filled" : "subtle"}
-            color="cyan"
+            color={editor.isActive("bulletList") ? "terracotta" : "gray"}
             size="sm"
             onClick={() => editor.chain().focus().toggleBulletList().run()}
           >

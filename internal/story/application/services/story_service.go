@@ -2,8 +2,8 @@ package services
 
 import (
 	"context"
-	"fmt"
-	"time"
+
+	"github.com/google/uuid"
 
 	"dramastudio/internal/story/domain"
 )
@@ -16,19 +16,43 @@ func NewStoryService(repo domain.StoryRepository) *StoryService {
 	return &StoryService{repo: repo}
 }
 
+// EnsureSeries returns the project's series, creating it if absent. A
+// project has exactly one series per the domain model (§9).
+func (s *StoryService) EnsureSeries(ctx context.Context, projectID, title, description string) (*domain.Series, error) {
+	if existing, err := s.repo.FindSeriesByProject(ctx, projectID); err == nil {
+		return existing, nil
+	}
+	series := &domain.Series{
+		ID:          "series_" + uuid.NewString(),
+		ProjectID:   projectID,
+		Title:       title,
+		Description: description,
+		SeasonIDs:   []string{},
+	}
+	if err := s.repo.SaveSeries(ctx, series); err != nil {
+		return nil, err
+	}
+	return series, nil
+}
+
 func (s *StoryService) GetSeries(ctx context.Context, id string) (*domain.Series, error) {
 	return s.repo.FindSeriesByID(ctx, id)
 }
 
+func (s *StoryService) GetSeriesByProject(ctx context.Context, projectID string) (*domain.Series, error) {
+	return s.repo.FindSeriesByProject(ctx, projectID)
+}
+
 func (s *StoryService) CreateSeason(ctx context.Context, seriesID, title, summary string, number int) (*domain.Season, error) {
-	id := fmt.Sprintf("season_%d", time.Now().UnixNano())
+	if _, err := s.repo.FindSeriesByID(ctx, seriesID); err != nil {
+		return nil, err
+	}
 	season := &domain.Season{
-		ID:         id,
-		SeriesID:   seriesID,
-		Number:     number,
-		Title:      title,
-		Summary:    summary,
-		EpisodeIDs: []string{},
+		ID:       "season_" + uuid.NewString(),
+		SeriesID: seriesID,
+		Number:   number,
+		Title:    title,
+		Summary:  summary,
 	}
 	if err := s.repo.SaveSeason(ctx, season); err != nil {
 		return nil, err
@@ -40,16 +64,37 @@ func (s *StoryService) ListSeasons(ctx context.Context, seriesID string) ([]*dom
 	return s.repo.ListSeasonsBySeries(ctx, seriesID)
 }
 
-func (s *StoryService) CreateEpisode(ctx context.Context, seasonID, title, summary string, number int) (*domain.Episode, error) {
-	id := fmt.Sprintf("ep_%d", time.Now().UnixNano())
+func (s *StoryService) GetSeason(ctx context.Context, id string) (*domain.Season, error) {
+	return s.repo.FindSeasonByID(ctx, id)
+}
+
+func (s *StoryService) CreateArc(ctx context.Context, seasonID, title string, number int) (*domain.StoryArc, error) {
+	if _, err := s.repo.FindSeasonByID(ctx, seasonID); err != nil {
+		return nil, err
+	}
+	arc := &domain.StoryArc{ID: "arc_" + uuid.NewString(), SeasonID: seasonID, Title: title, Number: number}
+	if err := s.repo.SaveArc(ctx, arc); err != nil {
+		return nil, err
+	}
+	return arc, nil
+}
+
+func (s *StoryService) ListArcs(ctx context.Context, seasonID string) ([]*domain.StoryArc, error) {
+	return s.repo.ListArcsBySeason(ctx, seasonID)
+}
+
+func (s *StoryService) CreateEpisode(ctx context.Context, seasonID, arcID, title, summary string, number int) (*domain.Episode, error) {
+	if _, err := s.repo.FindSeasonByID(ctx, seasonID); err != nil {
+		return nil, err
+	}
 	ep := &domain.Episode{
-		ID:       id,
+		ID:       "ep_" + uuid.NewString(),
 		SeasonID: seasonID,
+		ArcID:    arcID,
 		Number:   number,
 		Title:    title,
 		Summary:  summary,
 		Status:   domain.EpisodePlanned,
-		SceneIDs: []string{},
 	}
 	if err := s.repo.SaveEpisode(ctx, ep); err != nil {
 		return nil, err
@@ -65,10 +110,40 @@ func (s *StoryService) GetEpisode(ctx context.Context, episodeID string) (*domai
 	return s.repo.FindEpisodeByID(ctx, episodeID)
 }
 
+// SetEpisodeScript records generated/approved script content.
+func (s *StoryService) SetEpisodeScript(ctx context.Context, episodeID, script string) (*domain.Episode, error) {
+	ep, err := s.repo.FindEpisodeByID(ctx, episodeID)
+	if err != nil {
+		return nil, err
+	}
+	ep.Script = script
+	if ep.Status == domain.EpisodePlanned {
+		ep.Status = domain.EpisodeScripted
+	}
+	if err := s.repo.SaveEpisode(ctx, ep); err != nil {
+		return nil, err
+	}
+	return ep, nil
+}
+
+func (s *StoryService) SetEpisodeStatus(ctx context.Context, episodeID string, status domain.EpisodeStatus) (*domain.Episode, error) {
+	ep, err := s.repo.FindEpisodeByID(ctx, episodeID)
+	if err != nil {
+		return nil, err
+	}
+	ep.Status = status
+	if err := s.repo.SaveEpisode(ctx, ep); err != nil {
+		return nil, err
+	}
+	return ep, nil
+}
+
 func (s *StoryService) CreateScene(ctx context.Context, episodeID, title, description, locationID, timeOfDay string, number int, characterIDs []string) (*domain.Scene, error) {
-	id := fmt.Sprintf("scene_%d", time.Now().UnixNano())
+	if _, err := s.repo.FindEpisodeByID(ctx, episodeID); err != nil {
+		return nil, err
+	}
 	sc := &domain.Scene{
-		ID:           id,
+		ID:           "scene_" + uuid.NewString(),
 		EpisodeID:    episodeID,
 		Number:       number,
 		Title:        title,
@@ -76,7 +151,6 @@ func (s *StoryService) CreateScene(ctx context.Context, episodeID, title, descri
 		LocationID:   locationID,
 		TimeOfDay:    timeOfDay,
 		CharacterIDs: characterIDs,
-		BeatIDs:      []string{},
 	}
 	if err := s.repo.SaveScene(ctx, sc); err != nil {
 		return nil, err
@@ -84,6 +158,92 @@ func (s *StoryService) CreateScene(ctx context.Context, episodeID, title, descri
 	return sc, nil
 }
 
+func (s *StoryService) GetScene(ctx context.Context, sceneID string) (*domain.Scene, error) {
+	return s.repo.FindSceneByID(ctx, sceneID)
+}
+
 func (s *StoryService) ListScenes(ctx context.Context, episodeID string) ([]*domain.Scene, error) {
 	return s.repo.ListScenesByEpisode(ctx, episodeID)
+}
+
+func (s *StoryService) CreateBeat(ctx context.Context, sceneID, action, dialogue, characterID string, seq int) (*domain.Beat, error) {
+	if _, err := s.repo.FindSceneByID(ctx, sceneID); err != nil {
+		return nil, err
+	}
+	b := &domain.Beat{
+		ID:          "beat_" + uuid.NewString(),
+		SceneID:     sceneID,
+		Seq:         seq,
+		Action:      action,
+		Dialogue:    dialogue,
+		CharacterID: characterID,
+	}
+	if err := s.repo.SaveBeat(ctx, b); err != nil {
+		return nil, err
+	}
+	return b, nil
+}
+
+func (s *StoryService) ListBeats(ctx context.Context, sceneID string) ([]*domain.Beat, error) {
+	return s.repo.ListBeatsByScene(ctx, sceneID)
+}
+
+// AddGraphNode records a narrative event node (§14).
+func (s *StoryService) AddGraphNode(ctx context.Context, projectID, nodeType, title, episodeID, sceneID string) (*domain.StoryNode, error) {
+	n := &domain.StoryNode{
+		ID:        "node_" + uuid.NewString(),
+		Type:      nodeType,
+		Title:     title,
+		EpisodeID: episodeID,
+		SceneID:   sceneID,
+	}
+	if err := s.repo.SaveGraphNode(ctx, projectID, n); err != nil {
+		return nil, err
+	}
+	return n, nil
+}
+
+// AddGraphEdge links two nodes with a causal relation.
+func (s *StoryService) AddGraphEdge(ctx context.Context, projectID, fromID, toID string, relation domain.EdgeType) (*domain.StoryEdge, error) {
+	e := &domain.StoryEdge{FromID: fromID, ToID: toID, Relation: relation}
+	if err := s.repo.SaveGraphEdge(ctx, projectID, e); err != nil {
+		return nil, err
+	}
+	return e, nil
+}
+
+// GetGraph assembles the project's story graph.
+func (s *StoryService) GetGraph(ctx context.Context, projectID string) (*domain.StoryGraph, error) {
+	nodes, err := s.repo.ListGraphNodes(ctx, projectID)
+	if err != nil {
+		return nil, err
+	}
+	edges, err := s.repo.ListGraphEdges(ctx, projectID)
+	if err != nil {
+		return nil, err
+	}
+	g := domain.NewStoryGraph()
+	for _, n := range nodes {
+		g.Nodes[n.ID] = n
+	}
+	g.Edges = edges
+	return g, nil
+}
+
+func (s *StoryService) CreatePlotThread(ctx context.Context, projectID, name, description string) (*domain.PlotThread, error) {
+	t := &domain.PlotThread{
+		ID:          "thread_" + uuid.NewString(),
+		ProjectID:   projectID,
+		Name:        name,
+		Description: description,
+		Status:      "open",
+	}
+	if err := s.repo.SavePlotThread(ctx, t); err != nil {
+		return nil, err
+	}
+	return t, nil
+}
+
+func (s *StoryService) ListPlotThreads(ctx context.Context, projectID string) ([]*domain.PlotThread, error) {
+	return s.repo.ListPlotThreads(ctx, projectID)
 }

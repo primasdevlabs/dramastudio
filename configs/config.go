@@ -98,7 +98,7 @@ func Load() (*Config, error) {
 	cfg := &Config{
 		Environment: envStr("DRAMASTUDIO_ENV", "development"),
 		Server: ServerConfig{
-			Port:            envInt("PORT", 8080),
+			Port:            envInt("PORT", 9471),
 			ReadTimeout:     envDur("HTTP_READ_TIMEOUT", 15*time.Second),
 			WriteTimeout:    envDur("HTTP_WRITE_TIMEOUT", 60*time.Second),
 			IdleTimeout:     envDur("HTTP_IDLE_TIMEOUT", 60*time.Second),

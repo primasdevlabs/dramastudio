@@ -1,33 +1,49 @@
 /**
  * DramaStudio Design System Tokens - Colors
- * Product language color palette mapping dark studio identity.
+ * Professional creative software palette (DaVinci Resolve / Linear / Figma inspired).
+ * No gradients, no glowing effects, no purple/indigo AI aesthetic, no generic SaaS blue.
  */
 
 export const colors = {
-  bg: {
-    base: "#090D16",
-    card: "#111726",
-    panel: "#1A2335",
-    hover: "#222D42",
+  // Dark Production Theme (Default for Workstation)
+  dark: {
+    canvas: "#151514",
+    surface: "#1C1B19",
+    surfaceRaised: "#24221F",
+    ink: "#F2EEE7",
+    inkMuted: "#A9A39A",
+    border: "#393631",
+    accent: "#C56A45", // Burnt Terracotta
+    accentDark: "#8E3F25",
+    success: "#6C9A76", // Muted Green
+    warning: "#C18A45", // Warm Amber
+    danger: "#C65A50",  // Muted Red
   },
-  border: {
-    subtle: "#1E293B",
-    default: "#26334D",
-    active: "#06B6D4",
+  // Light Warm Neutral Theme
+  light: {
+    canvas: "#F4F1EB",
+    surface: "#FFFCF7",
+    surfaceRaised: "#FFFFFF",
+    ink: "#191816",
+    inkMuted: "#68645D",
+    border: "#D9D4CB",
+    borderStrong: "#BEB8AE",
+    accent: "#B45732",
+    accentDark: "#8E3F25",
+    success: "#3E6B4A",
+    warning: "#A66A24",
+    danger: "#A83E36",
+    info: "#4D6672",
   },
-  accent: {
-    cyan: "#06B6D4",
-    cyanGlow: "rgba(6, 182, 212, 0.25)",
-    amber: "#F59E0B",
-    amberGlow: "rgba(245, 158, 11, 0.25)",
-    emerald: "#10B981",
-    emeraldGlow: "rgba(16, 185, 129, 0.25)",
-    rose: "#F43F5E",
-    violet: "#8B5CF6",
-  },
-  text: {
-    primary: "#F8FAFC",
-    secondary: "#94A3B8",
-    muted: "#64748B",
+  // Production Semantics
+  semantics: {
+    completed: "#6C9A76",
+    running: "#C56A45",
+    waiting: "#A9A39A",
+    warning: "#C18A45",
+    blocked: "#C65A50",
+    draft: "#A9A39A",
+    approved: "#6C9A76",
+    rejected: "#C65A50",
   },
 } as const;
