@@ -2,7 +2,6 @@ package persistence
 
 import (
 	"context"
-	"fmt"
 	"sync"
 
 	"dramastudio/internal/projects/domain"
@@ -21,46 +20,78 @@ func NewInMemoryProjectRepository() *InMemoryProjectRepository {
 	}
 }
 
-func (r *InMemoryProjectRepository) FindByID(ctx context.Context, id domain.ProjectID) (*domain.Project, error) {
+func (r *InMemoryProjectRepository) FindByID(_ context.Context, id domain.ProjectID) (*domain.Project, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	p, ok := r.projects[id]
 	if !ok {
-		return nil, fmt.Errorf("project not found: %s", id)
+		return nil, domain.ErrProjectNotFound
 	}
 	return p, nil
 }
 
-func (r *InMemoryProjectRepository) ListAll(ctx context.Context) ([]*domain.Project, error) {
+func (r *InMemoryProjectRepository) ListAll(_ context.Context, orgID string) ([]*domain.Project, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	res := make([]*domain.Project, 0, len(r.projects))
 	for _, p := range r.projects {
-		res = append(res, p)
+		if orgID == "" || p.OrgID == orgID {
+			res = append(res, p)
+		}
 	}
 	return res, nil
 }
 
-func (r *InMemoryProjectRepository) Save(ctx context.Context, project *domain.Project) error {
+func (r *InMemoryProjectRepository) Save(_ context.Context, project *domain.Project) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	r.projects[project.ID] = project
 	return nil
 }
 
-func (r *InMemoryProjectRepository) SaveBible(ctx context.Context, bible *domain.SeriesBible) error {
+func (r *InMemoryProjectRepository) SaveBible(_ context.Context, bible *domain.SeriesBible) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	r.bibles[bible.ProjectID] = append(r.bibles[bible.ProjectID], bible)
+	list := r.bibles[bible.ProjectID]
+	for i, b := range list {
+		if b.Version == bible.Version {
+			list[i] = bible
+			return nil
+		}
+	}
+	r.bibles[bible.ProjectID] = append(list, bible)
 	return nil
 }
 
-func (r *InMemoryProjectRepository) GetLatestBible(ctx context.Context, projectID domain.ProjectID) (*domain.SeriesBible, error) {
+func (r *InMemoryProjectRepository) GetLatestBible(_ context.Context, projectID domain.ProjectID) (*domain.SeriesBible, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-	list, ok := r.bibles[projectID]
-	if !ok || len(list) == 0 {
-		return nil, fmt.Errorf("series bible not found for project: %s", projectID)
+	list := r.bibles[projectID]
+	if len(list) == 0 {
+		return nil, domain.ErrBibleNotFound
 	}
-	return list[len(list)-1], nil
+	latest := list[0]
+	for _, b := range list {
+		if b.Version > latest.Version {
+			latest = b
+		}
+	}
+	return latest, nil
+}
+
+func (r *InMemoryProjectRepository) GetBibleVersion(_ context.Context, projectID domain.ProjectID, version int) (*domain.SeriesBible, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	for _, b := range r.bibles[projectID] {
+		if b.Version == version {
+			return b, nil
+		}
+	}
+	return nil, domain.ErrBibleNotFound
+}
+
+func (r *InMemoryProjectRepository) ListBibleVersions(_ context.Context, projectID domain.ProjectID) ([]*domain.SeriesBible, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	return append([]*domain.SeriesBible(nil), r.bibles[projectID]...), nil
 }
