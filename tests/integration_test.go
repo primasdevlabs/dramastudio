@@ -11,15 +11,20 @@ import (
 	charsApp "dramastudio/internal/characters/application/services"
 	charsInfra "dramastudio/internal/characters/infrastructure/persistence"
 	contApp "dramastudio/internal/continuity/application/services"
-	contInfra "dramastudio/internal/continuity/infrastructure/persistence"
 	contDomain "dramastudio/internal/continuity/domain"
+	contInfra "dramastudio/internal/continuity/infrastructure/persistence"
 	identApp "dramastudio/internal/identity/application/services"
 	identInfra "dramastudio/internal/identity/infrastructure/persistence"
 	mediaApp "dramastudio/internal/media/application/services"
 	mediaDomain "dramastudio/internal/media/domain"
 	mediaInfra "dramastudio/internal/media/infrastructure/persistence"
+	"dramastudio/internal/platform/ai/capabilities"
+	"dramastudio/internal/platform/workflow"
+	"dramastudio/internal/platform/workflow/activities"
 	postApp "dramastudio/internal/postproduction/application/services"
+	postDomain "dramastudio/internal/postproduction/domain"
 	postInfra "dramastudio/internal/postproduction/infrastructure/persistence"
+	"dramastudio/internal/postproduction/infrastructure/ffmpeg"
 	prodApp "dramastudio/internal/production/application/services"
 	prodDomain "dramastudio/internal/production/domain"
 	prodInfra "dramastudio/internal/production/infrastructure/persistence"
@@ -179,4 +184,77 @@ func TestFullDramaStudioWorkflow(t *testing.T) {
 	}
 
 	t.Logf("DramaStudio end-to-end integration test passed! Render URL: %s, Publication ID: %s, Job ID: %s", render.OutputURL, pub.ID, job.ID)
+}
+
+func TestProduceEpisodeWorkflow(t *testing.T) {
+	ctx := context.Background()
+	act := activities.NewEpisodeActivities()
+	wf := workflow.NewProduceEpisodeWorkflow(act)
+
+	res, err := wf.Execute(ctx, "proj_001", "ep_001")
+	if err != nil {
+		t.Fatalf("ProduceEpisodeWorkflow failed: %v", err)
+	}
+	if res.Status != "COMPLETED" {
+		t.Errorf("Expected status COMPLETED, got %s", res.Status)
+	}
+	if len(res.GeneratedShots) != 2 {
+		t.Errorf("Expected 2 generated shots, got %d", len(res.GeneratedShots))
+	}
+	t.Logf("ProduceEpisodeWorkflow passed cleanly! Render URL: %s", res.RenderURL)
+}
+
+func TestFFmpegAdapterCommandBuilder(t *testing.T) {
+	adapter := ffmpeg.NewFFmpegAdapter("ffmpeg")
+	_, args := adapter.BuildConcatCommand(ffmpeg.ConcatOptions{
+		VideoURLs:  []string{"shot1.mp4", "shot2.mp4"},
+		Resolution: "1080x1920",
+		OutputPath: "output.mp4",
+	})
+
+	if len(args) == 0 {
+		t.Fatalf("Expected non-empty args for concat command")
+	}
+
+	ctx := context.Background()
+	tl := &postDomain.Timeline{
+		ID:        "tl_001",
+		EpisodeID: "ep_001",
+		VideoTracks: []postDomain.TrackItem{
+			{ID: "t1", AssetURL: "shot1.mp4"},
+			{ID: "t2", AssetURL: "shot2.mp4"},
+		},
+	}
+	renderURL, err := adapter.RenderTimeline(ctx, tl, "output.mp4")
+	if err != nil {
+		t.Fatalf("RenderTimeline error: %v", err)
+	}
+	if renderURL == "" {
+		t.Errorf("Expected non-empty render URL")
+	}
+	t.Logf("FFmpegAdapter test passed! Render URL: %s", renderURL)
+}
+
+func TestCapabilityRouter(t *testing.T) {
+	ctx := context.Background()
+	reg := capabilities.NewModelRegistry()
+	router := capabilities.NewCapabilityRouter(reg)
+
+	resp, err := router.Execute(ctx, capabilities.GenerationRequest{
+		Capability: capabilities.CapVideoGen,
+		ProjectID:  "proj_001",
+		EpisodeID:  "ep_001",
+		Prompt: capabilities.StructuredPrompt{
+			Subject:  "Sarah",
+			Action:   "looking at phone",
+			ShotType: "medium_close_up",
+		},
+	})
+	if err != nil {
+		t.Fatalf("CapabilityRouter Execute failed: %v", err)
+	}
+	if resp.Provider != "wan" {
+		t.Errorf("Expected provider wan for video generation, got %s", resp.Provider)
+	}
+	t.Logf("CapabilityRouter test passed! Provider: %s, Model: %s, URL: %s", resp.Provider, resp.Model, resp.OutputURL)
 }
