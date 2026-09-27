@@ -1,16 +1,14 @@
 "use client";
 
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { FolderPlus, AlertCircle } from "lucide-react";
-import { Paper, Group, Stack, Title, Text, Badge, SimpleGrid, Skeleton, Alert, ThemeIcon } from "@mantine/core";
+import Link from "next/link";
+import { useQuery } from "@tanstack/react-query";
+import { FolderPlus, AlertCircle, Plus } from "lucide-react";
+import { Paper, Group, Stack, Title, Text, Badge, SimpleGrid, Skeleton, Alert, ThemeIcon, Button } from "@mantine/core";
 import { api } from "@/lib/api/client";
 import { Project } from "@/lib/api/types";
 import { ProjectCard } from "@/features/projects/components/project-card";
-import { NewProjectDialog } from "@/features/projects/components/new-project-dialog";
 
 export default function ProjectsPage() {
-  const queryClient = useQueryClient();
-
   const { data, isLoading, error } = useQuery({
     queryKey: ["projects"],
     queryFn: async () => {
@@ -37,7 +35,17 @@ export default function ProjectsPage() {
               Manage serialized AI drama projects, series bibles, and production pipelines
             </Text>
           </Stack>
-          <NewProjectDialog onCreated={() => queryClient.invalidateQueries({ queryKey: ["projects"] })} />
+          <Button
+            component={Link}
+            href="/projects/new"
+            leftSection={<Plus size={16} />}
+            color="terracotta"
+            variant="filled"
+            size="sm"
+            radius="sm"
+          >
+            New Production
+          </Button>
         </Group>
       </Paper>
 
@@ -72,7 +80,17 @@ export default function ProjectsPage() {
                 Start by initializing your first AI drama series project.
               </Text>
             </div>
-            <NewProjectDialog onCreated={() => queryClient.invalidateQueries({ queryKey: ["projects"] })} />
+            <Button
+              component={Link}
+              href="/projects/new"
+              leftSection={<Plus size={16} />}
+              color="terracotta"
+              variant="filled"
+              size="sm"
+              radius="sm"
+            >
+              Create First Production
+            </Button>
           </Stack>
         </Paper>
       )}

@@ -6,10 +6,10 @@ import (
 )
 
 var (
-	ErrRunNotFound      = errors.New("production run not found")
-	ErrJobNotFound      = errors.New("production job not found")
-	ErrShotNotFound     = errors.New("shot not found")
-	ErrApprovalNotFound = errors.New("approval request not found")
+	ErrRunNotFound       = errors.New("production run not found")
+	ErrJobNotFound       = errors.New("production job not found")
+	ErrShotNotFound      = errors.New("shot not found")
+	ErrApprovalNotFound  = errors.New("approval request not found")
 	ErrInvalidTransition = errors.New("invalid run state transition")
 )
 
