@@ -110,7 +110,7 @@ export default function NewProjectPage() {
             <Group justify="space-between" className="border-b border-studio-border pb-3">
               <Group gap="xs">
                 <Layers size={16} className="text-studio-accent" />
-                <Text fw={700} size="sm" c="white" uppercase className="tracking-wider font-mono">
+                <Text fw={700} size="sm" c="white" tt="uppercase" className="tracking-wider font-mono">
                   Series Identity & Premise
                 </Text>
               </Group>
@@ -179,7 +179,7 @@ export default function NewProjectPage() {
             <Group justify="space-between" className="border-b border-studio-border pb-3">
               <Group gap="xs">
                 <Video size={16} className="text-studio-accent" />
-                <Text fw={700} size="sm" c="white" uppercase className="tracking-wider font-mono">
+                <Text fw={700} size="sm" c="white" tt="uppercase" className="tracking-wider font-mono">
                   Orchestration & Media Format Specs
                 </Text>
               </Group>
