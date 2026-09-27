@@ -108,7 +108,7 @@ export default function StoryboardPage({ params }: { params: { projectId: string
                   <div className="w-12 h-12 rounded-full bg-cyan-500/20 text-cyan-400 flex items-center justify-center mx-auto mb-2 border border-cyan-500/30">
                     <Play className="w-6 h-6 ml-0.5" />
                   </div>
-                  <span className="text-xs font-mono text-cyan-400">9:16 Vertical Render Preview</span>
+                  <span className="text-xs font-semibold text-cyan-400">9:16 Vertical Render Preview</span>
                 </div>
               </div>
 

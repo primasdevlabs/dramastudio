@@ -2,7 +2,9 @@
 
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Users, Plus, Shirt, UserCheck, Shield } from "lucide-react";
+import { Users, Plus, Shirt, UserCheck } from "lucide-react";
+import { Paper, Group, Stack, Title, Text, Badge, Button, Modal, TextInput, Textarea, ThemeIcon, Avatar, SimpleGrid, Card } from "@mantine/core";
+import { notifications } from "@mantine/notifications";
 import { api } from "@/lib/api/client";
 import { Character } from "@/lib/api/types";
 
@@ -13,7 +15,7 @@ export default function CharacterStudioPage({ params }: { params: { projectId: s
   const [name, setName] = useState("");
   const [role, setRole] = useState("Protagonist");
   const [bio, setBio] = useState("");
-  const [isOpen, setIsOpen] = useState(false);
+  const [opened, setOpened] = useState(false);
 
   const { data: characters, isLoading } = useQuery({
     queryKey: ["characters", projectId],
@@ -32,140 +34,170 @@ export default function CharacterStudioPage({ params }: { params: { projectId: s
         bio,
       });
     },
-    onSuccess: () => {
+    onSuccess: (c) => {
       queryClient.invalidateQueries({ queryKey: ["characters", projectId] });
-      setIsOpen(false);
+      setOpened(false);
       setName("");
       setBio("");
+      notifications.show({
+        title: "Character Created",
+        message: `Added character profile for ${c.name || name}`,
+        color: "pink",
+      });
     },
   });
 
   return (
-    <div className="max-w-7xl mx-auto space-y-6">
+    <Stack gap="lg" className="max-w-7xl mx-auto">
       {/* Header */}
-      <div className="flex items-center justify-between bg-studio-card border border-studio-border p-6 rounded-2xl shadow-xl">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-pink-500/10 border border-pink-500/30 flex items-center justify-center text-pink-400">
-            <Users className="w-5 h-5" />
-          </div>
-          <div>
-            <h1 className="text-xl font-bold text-white">Character Studio</h1>
-            <p className="text-xs text-studio-muted">Manage persistent character identities, wardrobe, and voice profiles</p>
-          </div>
-        </div>
+      <Paper p="xl" radius="xl" withBorder className="bg-studio-card border-studio-border shadow-xl">
+        <Group justify="space-between" align="center">
+          <Group gap="md">
+            <ThemeIcon color="pink" variant="light" size={44} radius="xl">
+              <Users size={22} />
+            </ThemeIcon>
+            <div>
+              <Title order={3} c="white">
+                Character Studio
+              </Title>
+              <Text size="xs" c="dimmed">
+                Manage persistent character identities, wardrobe, and voice profiles
+              </Text>
+            </div>
+          </Group>
 
-        <button
-          onClick={() => setIsOpen(true)}
-          className="inline-flex items-center gap-2 bg-gradient-to-r from-pink-500 to-rose-600 hover:from-pink-400 hover:to-rose-500 text-white font-bold text-xs px-4 py-2.5 rounded-lg shadow-lg shadow-pink-500/20 transition-all"
-        >
-          <Plus className="w-4 h-4" /> Add Character Profile
-        </button>
-      </div>
+          <Button
+            onClick={() => setOpened(true)}
+            leftSection={<Plus size={16} />}
+            variant="gradient"
+            gradient={{ from: "pink", to: "grape", deg: 90 }}
+            color="pink"
+          >
+            Add Character Profile
+          </Button>
+        </Group>
+      </Paper>
 
       {/* Modal */}
-      {isOpen && (
-        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-studio-card border border-studio-border rounded-xl w-full max-w-md p-6 shadow-2xl">
-            <h2 className="text-lg font-bold text-white mb-4">New Character Profile</h2>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-xs font-semibold text-studio-muted mb-1">Character Name</label>
-                <input
-                  type="text"
-                  placeholder="e.g. Sarah Johnson"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className="w-full bg-studio-panel border border-studio-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-pink-400"
-                />
-              </div>
+      <Modal
+        opened={opened}
+        onClose={() => setOpened(false)}
+        title={
+          <Text fw={700} size="md" c="white">
+            New Character Profile
+          </Text>
+        }
+        centered
+        overlayProps={{ backgroundOpacity: 0.7, blur: 8 }}
+      >
+        <Stack gap="md">
+          <TextInput
+            label="Character Name"
+            placeholder="e.g. Sarah Johnson"
+            required
+            value={name}
+            onChange={(e) => setName(e.currentTarget.value)}
+            variant="filled"
+          />
 
-              <div>
-                <label className="block text-xs font-semibold text-studio-muted mb-1">Role / Archetype</label>
-                <input
-                  type="text"
-                  placeholder="e.g. Protagonist / Journalist"
-                  value={role}
-                  onChange={(e) => setRole(e.target.value)}
-                  className="w-full bg-studio-panel border border-studio-border rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-pink-400"
-                />
-              </div>
+          <TextInput
+            label="Role / Archetype"
+            placeholder="e.g. Protagonist / Journalist"
+            value={role}
+            onChange={(e) => setRole(e.currentTarget.value)}
+            variant="filled"
+          />
 
-              <div>
-                <label className="block text-xs font-semibold text-studio-muted mb-1">Biography & Appearance Notes</label>
-                <textarea
-                  rows={3}
-                  placeholder="Character backstory and visual constraints..."
-                  value={bio}
-                  onChange={(e) => setBio(e.target.value)}
-                  className="w-full bg-studio-panel border border-studio-border rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-pink-400 resize-none"
-                />
-              </div>
+          <Textarea
+            label="Biography & Appearance Notes"
+            placeholder="Character backstory and visual constraints..."
+            rows={3}
+            value={bio}
+            onChange={(e) => setBio(e.currentTarget.value)}
+            variant="filled"
+          />
 
-              <div className="flex items-center justify-end gap-3 pt-4 border-t border-studio-border">
-                <button
-                  onClick={() => setIsOpen(false)}
-                  className="px-4 py-2 text-xs font-semibold text-studio-muted hover:text-white"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={() => createMutation.mutate()}
-                  disabled={createMutation.isPending || !name}
-                  className="bg-pink-500 hover:bg-pink-400 text-white font-bold text-xs px-4 py-2 rounded-lg"
-                >
-                  {createMutation.isPending ? "Creating..." : "Save Character"}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+          <Group justify="flex-end" gap="sm" mt="md">
+            <Button variant="subtle" color="gray" onClick={() => setOpened(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={() => createMutation.mutate()}
+              loading={createMutation.isPending}
+              disabled={!name}
+              color="pink"
+            >
+              Save Character
+            </Button>
+          </Group>
+        </Stack>
+      </Modal>
 
       {/* Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <SimpleGrid cols={{ base: 1, md: 2, lg: 3 }} spacing="lg">
         {isLoading ? (
-          [1, 2].map((i) => <div key={i} className="h-48 bg-studio-card rounded-xl animate-pulse" />)
+          [1, 2].map((i) => <Paper key={i} h={180} radius="lg" className="bg-studio-card animate-pulse" />)
         ) : characters && characters.length > 0 ? (
           characters.map((c) => (
-            <div
+            <Card
               key={c.id}
-              className="bg-studio-card border border-studio-border rounded-xl p-5 space-y-3 hover:border-pink-500/40 transition-all"
+              p="lg"
+              radius="lg"
+              withBorder
+              className="bg-studio-card border-studio-border hover:border-pink-500/40 transition-all flex flex-col justify-between"
             >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-pink-500 to-purple-600 flex items-center justify-center font-bold text-white text-sm">
-                    {c.name.substring(0, 2).toUpperCase()}
-                  </div>
-                  <div>
-                    <h3 className="text-base font-bold text-white">{c.name}</h3>
-                    <span className="text-xs text-pink-400 font-semibold">{c.role}</span>
-                  </div>
-                </div>
-                <span className="px-2 py-0.5 rounded bg-pink-500/10 text-pink-400 text-xs font-mono border border-pink-500/20">
-                  v{c.version || 1}
-                </span>
-              </div>
+              <Stack gap="sm">
+                <Group justify="space-between">
+                  <Group gap="sm">
+                    <Avatar color="pink" radius="xl" size="md">
+                      {c.name.substring(0, 2).toUpperCase()}
+                    </Avatar>
+                    <div>
+                      <Text fw={700} size="sm" c="white">
+                        {c.name}
+                      </Text>
+                      <Text size="xs" c="pink.4" fw={600}>
+                        {c.role}
+                      </Text>
+                    </div>
+                  </Group>
 
-              <p className="text-xs text-studio-muted line-clamp-3 bg-studio-panel p-3 rounded-lg border border-studio-border/60">
-                {c.bio || "No backstory notes configured."}
-              </p>
+                  <Badge color="pink" variant="light" size="sm">
+                    v{c.version || 1}
+                  </Badge>
+                </Group>
 
-              <div className="flex items-center justify-between text-xs pt-2 border-t border-studio-border/60">
-                <span className="flex items-center gap-1 text-studio-muted">
-                  <Shirt className="w-3.5 h-3.5 text-pink-400" /> Wardrobe Locked
-                </span>
-                <span className="flex items-center gap-1 text-emerald-400 font-medium">
-                  <UserCheck className="w-3.5 h-3.5" /> Canon Reference
-                </span>
-              </div>
-            </div>
+                <Paper p="xs" radius="md" bg="dark.7" withBorder className="border-studio-border/60">
+                  <Text size="xs" c="dimmed" className="line-clamp-3">
+                    {c.bio || "No backstory notes configured."}
+                  </Text>
+                </Paper>
+              </Stack>
+
+              <Group justify="space-between" className="pt-3 border-t border-studio-border/60 mt-4">
+                <Group gap={4}>
+                  <Shirt size={14} className="text-pink-400" />
+                  <Text size="xs" c="dimmed">
+                    Wardrobe Locked
+                  </Text>
+                </Group>
+                <Group gap={4}>
+                  <UserCheck size={14} className="text-emerald-400" />
+                  <Text size="xs" c="emerald.4" fw={600}>
+                    Canon Reference
+                  </Text>
+                </Group>
+              </Group>
+            </Card>
           ))
         ) : (
-          <div className="col-span-full bg-studio-card border border-studio-border rounded-2xl p-8 text-center text-studio-muted text-xs">
-            No characters created yet. Add a character to build your cast.
-          </div>
+          <Paper p="xl" radius="xl" withBorder className="col-span-full bg-studio-card border-studio-border text-center">
+            <Text size="xs" c="dimmed">
+              No characters created yet. Add a character to build your cast.
+            </Text>
+          </Paper>
         )}
-      </div>
-    </div>
+      </SimpleGrid>
+    </Stack>
   );
 }

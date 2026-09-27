@@ -77,7 +77,7 @@ export default function EpisodeProductionWorkspace() {
               </div>
               <p className="text-xs font-semibold text-white mb-1">Shot 07: Medium Close-up on Sarah Croft</p>
               <p className="text-[11px] text-studio-muted max-w-md">"Sarah reaches for her encrypted datapad as neon shadows reflect across her trench coat."</p>
-              <div className="absolute bottom-3 right-3 px-2 py-1 rounded bg-black/60 backdrop-blur text-[10px] text-emerald-400 font-mono">
+              <div className="absolute bottom-3 right-3 px-2 py-1 rounded bg-black/60 backdrop-blur text-[10px] text-emerald-400 font-semibold">
                 Duration: 4.2s • Wan 2.1 Video Ready
               </div>
             </div>
@@ -85,7 +85,7 @@ export default function EpisodeProductionWorkspace() {
             {/* Prompt & Context Controls */}
             <div className="space-y-2">
               <label className="block text-[11px] font-semibold text-studio-muted">Specialized Model Context Payload (Resolved via Model Policy)</label>
-              <div className="p-3 rounded-lg bg-studio-bg border border-studio-border text-[11px] font-mono text-studio-muted space-y-1">
+              <div className="p-3 rounded-lg bg-studio-bg border border-studio-border text-[11px] text-studio-muted space-y-1">
                 <div><span className="text-studio-accent">character:</span> Sarah Croft (Wardrobe: Cyberpunk Trench Coat)</div>
                 <div><span className="text-studio-violet">location:</span> Neo-London Alley 14B</div>
                 <div><span className="text-emerald-400">continuity_constraint:</span> Sarah holds injury on left arm</div>

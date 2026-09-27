@@ -1,6 +1,20 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+@import "@mantine/core/styles.css";
+@import "@mantine/notifications/styles.css";
+
+@theme {
+  --color-studio-bg: #090D16;
+  --color-studio-card: #111726;
+  --color-studio-panel: #1A2335;
+  --color-studio-border: #26334D;
+  --color-studio-accent: #06B6D4;
+  --color-studio-violet: #8B5CF6;
+  --color-studio-pink: #EC4899;
+  --color-studio-amber: #F59E0B;
+  --color-studio-green: #10B981;
+  --color-studio-text: #F1F5F9;
+  --color-studio-muted: #94A3B8;
+}
 
 :root {
   --background: #090D16;

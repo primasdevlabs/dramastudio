@@ -1,12 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, Clapperboard, Sparkles } from "lucide-react";
+import { Plus, Sparkles } from "lucide-react";
+import { Modal, Button, TextInput, Textarea, Select, Group, Stack, Text, ThemeIcon } from "@mantine/core";
+import { notifications } from "@mantine/notifications";
 import { api } from "@/lib/api/client";
 import { Project } from "@/lib/api/types";
 
 export function NewProjectDialog({ onCreated }: { onCreated?: (p: Project) => void }) {
-  const [isOpen, setIsOpen] = useState(false);
+  const [opened, setOpened] = useState(false);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [genre, setGenre] = useState("Drama/Thriller");
@@ -26,12 +28,22 @@ export function NewProjectDialog({ onCreated }: { onCreated?: (p: Project) => vo
         language,
         mode,
       });
-      setIsOpen(false);
+      setOpened(false);
       setName("");
       setDescription("");
+      notifications.show({
+        title: "Production Initialized",
+        message: `Created series ${proj.name || name} successfully`,
+        color: "cyan",
+      });
       if (onCreated) onCreated(proj);
     } catch (err) {
       console.error("Failed to create project", err);
+      notifications.show({
+        title: "Creation Error",
+        message: "Failed to initialize production series",
+        color: "red",
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -39,99 +51,98 @@ export function NewProjectDialog({ onCreated }: { onCreated?: (p: Project) => vo
 
   return (
     <>
-      <button
-        onClick={() => setIsOpen(true)}
-        className="inline-flex items-center gap-2 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-semibold text-sm px-4 py-2 rounded-lg shadow-lg shadow-cyan-500/20 transition-all"
+      <Button
+        onClick={() => setOpened(true)}
+        leftSection={<Plus size={16} />}
+        variant="gradient"
+        gradient={{ from: "cyan", to: "blue", deg: 90 }}
+        size="sm"
+        radius="md"
+        className="shadow-lg shadow-cyan-500/20"
       >
-        <Plus className="w-4 h-4" /> New Production
-      </button>
+        New Production
+      </Button>
 
-      {isOpen && (
-        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-studio-card border border-studio-border rounded-xl w-full max-w-md p-6 shadow-2xl">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-lg bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400">
-                <Sparkles className="w-5 h-5" />
-              </div>
-              <div>
-                <h2 className="text-lg font-bold text-white">Create Drama Production</h2>
-                <p className="text-xs text-studio-muted">Set up your new AI drama series workspace</p>
-              </div>
+      <Modal
+        opened={opened}
+        onClose={() => setOpened(false)}
+        title={
+          <Group gap="xs">
+            <ThemeIcon color="cyan" variant="light" size="lg" radius="md">
+              <Sparkles size={18} />
+            </ThemeIcon>
+            <div>
+              <Text fw={700} size="md" c="white">
+                Create Drama Production
+              </Text>
+              <Text size="xs" c="dimmed">
+                Set up your new AI drama series workspace
+              </Text>
             </div>
+          </Group>
+        }
+        centered
+        size="md"
+        overlayProps={{ backgroundOpacity: 0.7, blur: 8 }}
+      >
+        <form onSubmit={handleSubmit}>
+          <Stack gap="md" mt="sm">
+            <TextInput
+              label="Production Title"
+              placeholder="e.g. The Last Promise"
+              required
+              value={name}
+              onChange={(e) => setName(e.currentTarget.value)}
+              variant="filled"
+            />
 
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label className="block text-xs font-semibold text-studio-muted mb-1">Production Title</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. The Last Promise"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className="w-full bg-studio-panel border border-studio-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-400"
-                />
-              </div>
+            <Textarea
+              label="Premise / Description"
+              placeholder="Brief story premise..."
+              rows={3}
+              value={description}
+              onChange={(e) => setDescription(e.currentTarget.value)}
+              variant="filled"
+            />
 
-              <div>
-                <label className="block text-xs font-semibold text-studio-muted mb-1">Premise / Description</label>
-                <textarea
-                  rows={3}
-                  placeholder="Brief story premise..."
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  className="w-full bg-studio-panel border border-studio-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-400 resize-none"
-                />
-              </div>
+            <Group grow gap="md">
+              <Select
+                label="Genre"
+                value={genre}
+                onChange={(val) => setGenre(val || "Drama/Thriller")}
+                data={[
+                  { value: "Drama/Thriller", label: "Drama / Thriller" },
+                  { value: "Romance", label: "Romance" },
+                  { value: "Sci-Fi", label: "Sci-Fi" },
+                  { value: "Action", label: "Action" },
+                  { value: "Mystery", label: "Mystery" },
+                ]}
+                variant="filled"
+              />
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-studio-muted mb-1">Genre</label>
-                  <select
-                    value={genre}
-                    onChange={(e) => setGenre(e.target.value)}
-                    className="w-full bg-studio-panel border border-studio-border rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-400"
-                  >
-                    <option value="Drama/Thriller">Drama / Thriller</option>
-                    <option value="Romance">Romance</option>
-                    <option value="Sci-Fi">Sci-Fi</option>
-                    <option value="Action">Action</option>
-                    <option value="Mystery">Mystery</option>
-                  </select>
-                </div>
+              <Select
+                label="Production Mode"
+                value={mode}
+                onChange={(val) => setMode((val as any) || "monitored")}
+                data={[
+                  { value: "monitored", label: "Monitored (Approval)" },
+                  { value: "autonomous", label: "Autonomous (Director)" },
+                ]}
+                variant="filled"
+              />
+            </Group>
 
-                <div>
-                  <label className="block text-xs font-semibold text-studio-muted mb-1">Production Mode</label>
-                  <select
-                    value={mode}
-                    onChange={(e) => setMode(e.target.value as any)}
-                    className="w-full bg-studio-panel border border-studio-border rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-400"
-                  >
-                    <option value="monitored">Monitored (Human Approval)</option>
-                    <option value="autonomous">Autonomous (Lead Director)</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="flex items-center justify-end gap-3 pt-4 border-t border-studio-border">
-                <button
-                  type="button"
-                  onClick={() => setIsOpen(false)}
-                  className="px-4 py-2 text-xs font-semibold text-studio-muted hover:text-white transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="bg-cyan-500 hover:bg-cyan-400 text-black font-bold text-xs px-4 py-2 rounded-lg transition-all"
-                >
-                  {isSubmitting ? "Creating..." : "Initialize Production"}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+            <Group justify="flex-end" gap="sm" mt="lg">
+              <Button variant="subtle" color="gray" onClick={() => setOpened(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" loading={isSubmitting} color="cyan">
+                Initialize Production
+              </Button>
+            </Group>
+          </Stack>
+        </form>
+      </Modal>
     </>
   );
 }

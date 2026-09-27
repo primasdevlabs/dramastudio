@@ -2,7 +2,9 @@
 
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { BookOpen, Save, Sparkles, CheckCircle2 } from "lucide-react";
+import { BookOpen, Save, CheckCircle2 } from "lucide-react";
+import { Paper, Group, Stack, Title, Text, Badge, Button, TextInput, Textarea, ThemeIcon, Alert, SimpleGrid } from "@mantine/core";
+import { notifications } from "@mantine/notifications";
 import { api } from "@/lib/api/client";
 import { SeriesBible } from "@/lib/api/types";
 
@@ -10,7 +12,7 @@ export default function SeriesBiblePage({ params }: { params: { projectId: strin
   const { projectId } = params;
   const queryClient = useQueryClient();
 
-  const { data: bible, isLoading } = useQuery({
+  const { data: bible } = useQuery({
     queryKey: ["bible", projectId],
     queryFn: () => api.get<SeriesBible>(`/v1/projects/${projectId}/bible`).catch(() => null),
   });
@@ -45,117 +47,110 @@ export default function SeriesBiblePage({ params }: { params: { projectId: strin
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["bible", projectId] });
       setSavedSuccess(true);
+      notifications.show({
+        title: "Bible Saved",
+        message: "Series Bible updated to next canonical version",
+        color: "amber",
+      });
       setTimeout(() => setSavedSuccess(false), 3000);
     },
   });
 
   return (
-    <div className="max-w-5xl mx-auto space-y-6">
+    <Stack gap="lg" className="max-w-5xl mx-auto">
       {/* Header */}
-      <div className="flex items-center justify-between bg-studio-card border border-studio-border p-6 rounded-2xl shadow-xl">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400">
-            <BookOpen className="w-5 h-5" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-xl font-bold text-white">Series Bible Workspace</h1>
-              {bible && (
-                <span className="px-2 py-0.5 rounded bg-amber-500/10 text-amber-400 text-xs font-semibold border border-amber-500/20">
-                  Version {bible.version}
-                </span>
-              )}
+      <Paper p="xl" radius="xl" withBorder className="bg-studio-card border-studio-border shadow-xl">
+        <Group justify="space-between" align="center">
+          <Group gap="md">
+            <ThemeIcon color="amber" variant="light" size={44} radius="xl">
+              <BookOpen size={22} />
+            </ThemeIcon>
+            <div>
+              <Group gap="xs">
+                <Title order={3} c="white">
+                  Series Bible Workspace
+                </Title>
+                {bible && (
+                  <Badge color="amber" variant="light" size="sm">
+                    Version {bible.version}
+                  </Badge>
+                )}
+              </Group>
+              <Text size="xs" c="dimmed">
+                Canonical creative foundation for AI generation
+              </Text>
             </div>
-            <p className="text-xs text-studio-muted">Canonical creative foundation for AI generation</p>
-          </div>
-        </div>
+          </Group>
 
-        <button
-          onClick={() => saveMutation.mutate()}
-          disabled={saveMutation.isPending}
-          className="inline-flex items-center gap-2 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-black font-bold text-xs px-4 py-2.5 rounded-lg shadow-lg shadow-amber-500/20 transition-all"
-        >
-          <Save className="w-4 h-4" />
-          {saveMutation.isPending ? "Saving Version..." : "Save Bible Version"}
-        </button>
-      </div>
+          <Button
+            onClick={() => saveMutation.mutate()}
+            loading={saveMutation.isPending}
+            leftSection={<Save size={16} />}
+            variant="gradient"
+            gradient={{ from: "amber", to: "orange", deg: 90 }}
+            color="amber"
+          >
+            Save Bible Version
+          </Button>
+        </Group>
+      </Paper>
 
       {savedSuccess && (
-        <div className="bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 px-4 py-3 rounded-xl text-xs font-semibold flex items-center gap-2">
-          <CheckCircle2 className="w-4 h-4" />
+        <Alert icon={<CheckCircle2 size={16} />} title="Canonical Version Updated" color="green">
           Series Bible successfully saved and updated to next canonical version!
-        </div>
+        </Alert>
       )}
 
       {/* Editor Form */}
-      <div className="bg-studio-card border border-studio-border rounded-2xl p-6 space-y-6">
-        <div>
-          <label className="block text-xs font-bold text-studio-muted uppercase tracking-wider mb-2">
-            Core Story Premise
-          </label>
-          <textarea
+      <Paper p="xl" radius="xl" withBorder className="bg-studio-card border-studio-border">
+        <Stack gap="lg">
+          <Textarea
+            label="Core Story Premise"
+            description="Central logline and premise for AI episode planning"
             rows={4}
             value={premise}
-            onChange={(e) => setPremise(e.target.value)}
+            onChange={(e) => setPremise(e.currentTarget.value)}
             placeholder="Write the central logline and core premise..."
-            className="w-full bg-studio-panel border border-studio-border rounded-xl p-4 text-sm text-white focus:outline-none focus:border-amber-400 resize-none"
+            variant="filled"
           />
-        </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <label className="block text-xs font-bold text-studio-muted uppercase tracking-wider mb-2">
-              Genre & Tone
-            </label>
-            <input
-              type="text"
+          <SimpleGrid cols={{ base: 1, md: 2 }} spacing="lg">
+            <TextInput
+              label="Genre & Tone"
               value={genre}
-              onChange={(e) => setGenre(e.target.value)}
-              className="w-full bg-studio-panel border border-studio-border rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-amber-400"
+              onChange={(e) => setGenre(e.currentTarget.value)}
+              variant="filled"
             />
-          </div>
 
-          <div>
-            <label className="block text-xs font-bold text-studio-muted uppercase tracking-wider mb-2">
-              Central Themes (Comma Separated)
-            </label>
-            <input
-              type="text"
+            <TextInput
+              label="Central Themes (Comma Separated)"
               value={themes}
-              onChange={(e) => setThemes(e.target.value)}
-              className="w-full bg-studio-panel border border-studio-border rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-amber-400"
+              onChange={(e) => setThemes(e.currentTarget.value)}
+              variant="filled"
             />
-          </div>
-        </div>
+          </SimpleGrid>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <label className="block text-xs font-bold text-studio-muted uppercase tracking-wider mb-2">
-              World Rules (One per line)
-            </label>
-            <textarea
+          <SimpleGrid cols={{ base: 1, md: 2 }} spacing="lg">
+            <Textarea
+              label="World Rules (One per line)"
               rows={4}
               value={worldRules}
-              onChange={(e) => setWorldRules(e.target.value)}
+              onChange={(e) => setWorldRules(e.currentTarget.value)}
               placeholder="e.g. Grounded realism&#10;No supernatural events"
-              className="w-full bg-studio-panel border border-studio-border rounded-xl p-3.5 text-xs text-white focus:outline-none focus:border-amber-400 resize-none font-mono"
+              variant="filled"
             />
-          </div>
 
-          <div>
-            <label className="block text-xs font-bold text-studio-muted uppercase tracking-wider mb-2">
-              Narrative Rules (One per line)
-            </label>
-            <textarea
+            <Textarea
+              label="Narrative Rules (One per line)"
               rows={4}
               value={narrativeRules}
-              onChange={(e) => setNarrativeRules(e.target.value)}
+              onChange={(e) => setNarrativeRules(e.currentTarget.value)}
               placeholder="e.g. Actions have permanent consequences"
-              className="w-full bg-studio-panel border border-studio-border rounded-xl p-3.5 text-xs text-white focus:outline-none focus:border-amber-400 resize-none font-mono"
+              variant="filled"
             />
-          </div>
-        </div>
-      </div>
-    </div>
+          </SimpleGrid>
+        </Stack>
+      </Paper>
+    </Stack>
   );
 }

@@ -1,7 +1,8 @@
 "use client";
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { FolderPlus, Sparkles, Activity } from "lucide-react";
+import { FolderPlus, AlertCircle } from "lucide-react";
+import { Paper, Group, Stack, Title, Text, Badge, SimpleGrid, Skeleton, Alert, ThemeIcon } from "@mantine/core";
 import { api } from "@/lib/api/client";
 import { Project } from "@/lib/api/types";
 import { ProjectCard } from "@/features/projects/components/project-card";
@@ -19,54 +20,62 @@ export default function ProjectsPage() {
   });
 
   return (
-    <div className="max-w-7xl mx-auto space-y-6">
+    <Stack gap="lg" className="max-w-7xl mx-auto">
       {/* Header Banner */}
-      <div className="flex items-center justify-between bg-studio-card border border-studio-border p-6 rounded-2xl shadow-xl">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <span className="px-2.5 py-0.5 rounded-full bg-cyan-500/10 text-cyan-400 text-xs font-semibold border border-cyan-500/20">
-              Control Tower
-            </span>
-          </div>
-          <h1 className="text-2xl font-black text-white tracking-tight">Active Drama Productions</h1>
-          <p className="text-xs text-studio-muted">
-            Manage serialized AI drama projects, series bibles, and production pipelines
-          </p>
-        </div>
-        <NewProjectDialog onCreated={() => queryClient.invalidateQueries({ queryKey: ["projects"] })} />
-      </div>
+      <Paper p="xl" radius="xl" withBorder className="bg-studio-card border-studio-border shadow-xl">
+        <Group justify="space-between" align="center">
+          <Stack gap={4}>
+            <Group gap="xs">
+              <Badge color="cyan" variant="light" size="sm">
+                Control Tower
+              </Badge>
+            </Group>
+            <Title order={2} c="white" className="tracking-tight">
+              Active Drama Productions
+            </Title>
+            <Text size="xs" c="dimmed">
+              Manage serialized AI drama projects, series bibles, and production pipelines
+            </Text>
+          </Stack>
+          <NewProjectDialog onCreated={() => queryClient.invalidateQueries({ queryKey: ["projects"] })} />
+        </Group>
+      </Paper>
 
       {/* Grid List */}
       {isLoading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <SimpleGrid cols={{ base: 1, md: 2, lg: 3 }} spacing="lg">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="h-44 bg-studio-card border border-studio-border rounded-xl animate-pulse" />
+            <Skeleton key={i} height={180} radius="lg" />
           ))}
-        </div>
+        </SimpleGrid>
       ) : error ? (
-        <div className="bg-rose-500/10 border border-rose-500/20 text-rose-400 p-4 rounded-xl text-sm">
-          Failed to load projects: {(error as Error).message}
-        </div>
+        <Alert icon={<AlertCircle size={16} />} title="Loading Error" color="red" variant="filled">
+          Failed to load productions: {(error as Error).message}
+        </Alert>
       ) : data && data.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <SimpleGrid cols={{ base: 1, md: 2, lg: 3 }} spacing="lg">
           {data.map((project) => (
             <ProjectCard key={project.id} project={project} />
           ))}
-        </div>
+        </SimpleGrid>
       ) : (
-        <div className="bg-studio-card border border-studio-border rounded-2xl p-12 text-center max-w-md mx-auto space-y-4">
-          <div className="w-12 h-12 rounded-2xl bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 flex items-center justify-center mx-auto">
-            <FolderPlus className="w-6 h-6" />
-          </div>
-          <div>
-            <h3 className="text-lg font-bold text-white">No Productions Yet</h3>
-            <p className="text-xs text-studio-muted mt-1">
-              Start by initializing your first AI drama series project.
-            </p>
-          </div>
-          <NewProjectDialog onCreated={() => queryClient.invalidateQueries({ queryKey: ["projects"] })} />
-        </div>
+        <Paper p="xl" radius="xl" withBorder className="bg-studio-card border-studio-border text-center max-w-md mx-auto">
+          <Stack align="center" gap="md">
+            <ThemeIcon variant="light" color="cyan" size={48} radius="xl">
+              <FolderPlus size={24} />
+            </ThemeIcon>
+            <div>
+              <Text fw={700} size="lg" c="white">
+                No Productions Yet
+              </Text>
+              <Text size="xs" c="dimmed" mt={4}>
+                Start by initializing your first AI drama series project.
+              </Text>
+            </div>
+            <NewProjectDialog onCreated={() => queryClient.invalidateQueries({ queryKey: ["projects"] })} />
+          </Stack>
+        </Paper>
       )}
-    </div>
+    </Stack>
   );
 }

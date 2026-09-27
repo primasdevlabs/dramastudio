@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { ShieldCheck, Plus, CheckCircle2, AlertTriangle, XCircle } from "lucide-react";
+import { Paper, Group, Stack, Title, Text, Badge, Button, Modal, TextInput, Table, ThemeIcon } from "@mantine/core";
+import { notifications } from "@mantine/notifications";
 import { api } from "@/lib/api/client";
 import { StoryFact } from "@/lib/api/types";
 
@@ -13,7 +15,7 @@ export default function CanonPage({ params }: { params: { projectId: string } })
   const [subject, setSubject] = useState("");
   const [predicate, setPredicate] = useState("owns");
   const [object, setObject] = useState("");
-  const [isOpen, setIsOpen] = useState(false);
+  const [opened, setOpened] = useState(false);
 
   const { data: facts, isLoading } = useQuery({
     queryKey: ["canon-facts", projectId],
@@ -33,148 +35,168 @@ export default function CanonPage({ params }: { params: { projectId: string } })
         valid_from: "Episode 1",
       });
     },
-    onSuccess: () => {
+    onSuccess: (fact) => {
       queryClient.invalidateQueries({ queryKey: ["canon-facts", projectId] });
-      setIsOpen(false);
+      setOpened(false);
       setSubject("");
       setObject("");
+      notifications.show({
+        title: "Fact Established",
+        message: `Added canonical story fact: ${fact.subject || subject} ${fact.predicate || predicate} ${fact.object || object}`,
+        color: "cyan",
+      });
     },
   });
 
   return (
-    <div className="max-w-7xl mx-auto space-y-6">
+    <Stack gap="lg" className="max-w-7xl mx-auto">
       {/* Header */}
-      <div className="flex items-center justify-between bg-studio-card border border-studio-border p-6 rounded-2xl shadow-xl">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400">
-            <ShieldCheck className="w-5 h-5" />
-          </div>
-          <div>
-            <h1 className="text-xl font-bold text-white">Canon Context & Story Facts</h1>
-            <p className="text-xs text-studio-muted">Authoritative source of story truth and character knowledge state</p>
-          </div>
-        </div>
+      <Paper p="xl" radius="xl" withBorder className="bg-studio-card border-studio-border shadow-xl">
+        <Group justify="space-between" align="center">
+          <Group gap="md">
+            <ThemeIcon color="cyan" variant="light" size={44} radius="xl">
+              <ShieldCheck size={22} />
+            </ThemeIcon>
+            <div>
+              <Title order={3} c="white">
+                Canon Context & Story Facts
+              </Title>
+              <Text size="xs" c="dimmed">
+                Authoritative source of story truth and character knowledge state
+              </Text>
+            </div>
+          </Group>
 
-        <button
-          onClick={() => setIsOpen(true)}
-          className="inline-flex items-center gap-2 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-bold text-xs px-4 py-2.5 rounded-lg shadow-lg shadow-cyan-500/20 transition-all"
-        >
-          <Plus className="w-4 h-4" /> Add Canonical Fact
-        </button>
-      </div>
+          <Button
+            onClick={() => setOpened(true)}
+            leftSection={<Plus size={16} />}
+            variant="gradient"
+            gradient={{ from: "cyan", to: "blue", deg: 90 }}
+            color="cyan"
+          >
+            Add Canonical Fact
+          </Button>
+        </Group>
+      </Paper>
 
       {/* Modal */}
-      {isOpen && (
-        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-studio-card border border-studio-border rounded-xl w-full max-w-md p-6 shadow-2xl">
-            <h2 className="text-lg font-bold text-white mb-4">Establish Story Fact</h2>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-xs font-semibold text-studio-muted mb-1">Subject (Character / Entity)</label>
-                <input
-                  type="text"
-                  placeholder="e.g. Sarah"
-                  value={subject}
-                  onChange={(e) => setSubject(e.target.value)}
-                  className="w-full bg-studio-panel border border-studio-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-400"
-                />
-              </div>
+      <Modal
+        opened={opened}
+        onClose={() => setOpened(false)}
+        title={
+          <Text fw={700} size="md" c="white">
+            Establish Story Fact
+          </Text>
+        }
+        centered
+        overlayProps={{ backgroundOpacity: 0.7, blur: 8 }}
+      >
+        <Stack gap="md">
+          <TextInput
+            label="Subject (Character / Entity)"
+            placeholder="e.g. Sarah"
+            required
+            value={subject}
+            onChange={(e) => setSubject(e.currentTarget.value)}
+            variant="filled"
+          />
 
-              <div>
-                <label className="block text-xs font-semibold text-studio-muted mb-1">Predicate (Relation / Fact)</label>
-                <input
-                  type="text"
-                  placeholder="e.g. discovered_secret"
-                  value={predicate}
-                  onChange={(e) => setPredicate(e.target.value)}
-                  className="w-full bg-studio-panel border border-studio-border rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-400"
-                />
-              </div>
+          <TextInput
+            label="Predicate (Relation / Fact)"
+            placeholder="e.g. discovered_secret"
+            value={predicate}
+            onChange={(e) => setPredicate(e.currentTarget.value)}
+            variant="filled"
+          />
 
-              <div>
-                <label className="block text-xs font-semibold text-studio-muted mb-1">Object (Target / Information)</label>
-                <input
-                  type="text"
-                  placeholder="e.g. confidential_file"
-                  value={object}
-                  onChange={(e) => setObject(e.target.value)}
-                  className="w-full bg-studio-panel border border-studio-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-400"
-                />
-              </div>
+          <TextInput
+            label="Object (Target / Information)"
+            placeholder="e.g. confidential_file"
+            required
+            value={object}
+            onChange={(e) => setObject(e.currentTarget.value)}
+            variant="filled"
+          />
 
-              <div className="flex items-center justify-end gap-3 pt-4 border-t border-studio-border">
-                <button
-                  onClick={() => setIsOpen(false)}
-                  className="px-4 py-2 text-xs font-semibold text-studio-muted hover:text-white"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={() => createMutation.mutate()}
-                  disabled={createMutation.isPending || !subject || !object}
-                  className="bg-cyan-500 hover:bg-cyan-400 text-black font-bold text-xs px-4 py-2 rounded-lg"
-                >
-                  {createMutation.isPending ? "Saving..." : "Establish Fact"}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+          <Group justify="flex-end" gap="sm" mt="md">
+            <Button variant="subtle" color="gray" onClick={() => setOpened(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={() => createMutation.mutate()}
+              loading={createMutation.isPending}
+              disabled={!subject || !object}
+              color="cyan"
+            >
+              Establish Fact
+            </Button>
+          </Group>
+        </Stack>
+      </Modal>
 
       {/* Facts Table */}
-      <div className="bg-studio-card border border-studio-border rounded-2xl overflow-hidden shadow-xl">
-        <table className="w-full text-left text-xs text-studio-text">
-          <thead className="bg-studio-panel border-b border-studio-border text-studio-muted uppercase tracking-wider font-semibold">
-            <tr>
-              <th className="p-4">Subject</th>
-              <th className="p-4">Predicate</th>
-              <th className="p-4">Object</th>
-              <th className="p-4">Introduced In</th>
-              <th className="p-4">Status</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-studio-border/60">
+      <Paper radius="xl" withBorder className="bg-studio-card border-studio-border overflow-hidden shadow-xl">
+        <Table verticalSpacing="sm" horizontalSpacing="lg">
+          <Table.Thead className="bg-studio-panel">
+            <Table.Tr>
+              <Table.Th c="dimmed">Subject</Table.Th>
+              <Table.Th c="dimmed">Predicate</Table.Th>
+              <Table.Th c="dimmed">Object</Table.Th>
+              <Table.Th c="dimmed">Introduced In</Table.Th>
+              <Table.Th c="dimmed">Status</Table.Th>
+            </Table.Tr>
+          </Table.Thead>
+          <Table.Tbody>
             {isLoading ? (
-              <tr>
-                <td colSpan={5} className="p-8 text-center text-studio-muted italic">
-                  Loading canonical story facts...
-                </td>
-              </tr>
+              <Table.Tr>
+                <Table.Td colSpan={5} align="center">
+                  <Text size="xs" c="dimmed" fs="italic">
+                    Loading canonical story facts...
+                  </Text>
+                </Table.Td>
+              </Table.Tr>
             ) : facts && facts.length > 0 ? (
               facts.map((fact) => (
-                <tr key={fact.id} className="hover:bg-studio-panel/50 transition-colors">
-                  <td className="p-4 font-bold text-white">{fact.subject}</td>
-                  <td className="p-4 font-mono text-cyan-400">{fact.predicate}</td>
-                  <td className="p-4 font-semibold text-studio-text">{fact.object}</td>
-                  <td className="p-4 text-studio-muted">{fact.introduced || "Episode 1"}</td>
-                  <td className="p-4">
+                <Table.Tr key={fact.id}>
+                  <Table.Td fw={700} c="white">
+                    {fact.subject}
+                  </Table.Td>
+                  <Table.Td className="font-semibold text-cyan-400">
+                    {fact.predicate}
+                  </Table.Td>
+                  <Table.Td fw={600} c="white">
+                    {fact.object}
+                  </Table.Td>
+                  <Table.Td c="dimmed">{fact.introduced || "Episode 1"}</Table.Td>
+                  <Table.Td>
                     {fact.status === "canonical" ? (
-                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-semibold">
-                        <CheckCircle2 className="w-3.5 h-3.5" /> Canonical
-                      </span>
+                      <Badge color="emerald" variant="light" size="sm" leftSection={<CheckCircle2 size={12} />}>
+                        Canonical
+                      </Badge>
                     ) : fact.status === "disputed" ? (
-                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20 font-semibold">
-                        <AlertTriangle className="w-3.5 h-3.5" /> Disputed
-                      </span>
+                      <Badge color="amber" variant="light" size="sm" leftSection={<AlertTriangle size={12} />}>
+                        Disputed
+                      </Badge>
                     ) : (
-                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded bg-rose-500/10 text-rose-400 border border-rose-500/20 font-semibold">
-                        <XCircle className="w-3.5 h-3.5" /> Retconned
-                      </span>
+                      <Badge color="red" variant="light" size="sm" leftSection={<XCircle size={12} />}>
+                        Retconned
+                      </Badge>
                     )}
-                  </td>
-                </tr>
+                  </Table.Td>
+                </Table.Tr>
               ))
             ) : (
-              <tr>
-                <td colSpan={5} className="p-8 text-center text-studio-muted italic">
-                  No canonical facts established yet.
-                </td>
-              </tr>
+              <Table.Tr>
+                <Table.Td colSpan={5} align="center">
+                  <Text size="xs" c="dimmed" fs="italic">
+                    No canonical facts established yet.
+                  </Text>
+                </Table.Td>
+              </Table.Tr>
             )}
-          </tbody>
-        </table>
-      </div>
-    </div>
+          </Table.Tbody>
+        </Table>
+      </Paper>
+    </Stack>
   );
 }

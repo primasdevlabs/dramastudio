@@ -97,11 +97,11 @@ export default function ContinuityCenterPage({ params }: { params: { projectId: 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs bg-studio-panel p-3.5 rounded-xl border border-studio-border/60">
                 <div>
                   <span className="text-studio-muted font-semibold">Expected Canonical State:</span>
-                  <p className="text-emerald-400 font-mono mt-0.5">{issue.expected_state}</p>
+                  <p className="text-emerald-400 font-semibold mt-0.5">{issue.expected_state}</p>
                 </div>
                 <div>
                   <span className="text-studio-muted font-semibold">Actual Generated State:</span>
-                  <p className="text-rose-400 font-mono mt-0.5">{issue.actual_state}</p>
+                  <p className="text-rose-400 font-semibold mt-0.5">{issue.actual_state}</p>
                 </div>
               </div>
 

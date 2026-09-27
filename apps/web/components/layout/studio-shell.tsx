@@ -8,10 +8,8 @@ import {
   Users,
   Globe,
   Film,
-  Sparkles,
   Layers,
   ShieldCheck,
-  Cpu,
   Share2,
   Settings,
   FolderPlus,
@@ -20,7 +18,9 @@ import {
   ChevronRight,
   Menu,
   Sliders,
+  Cpu,
 } from "lucide-react";
+import { Tooltip, Badge, Group, Text, ActionIcon, ThemeIcon, UnstyledButton } from "@mantine/core";
 import { useStudioStore } from "@/stores/studio-store";
 
 const NAV_ITEMS = [
@@ -60,29 +60,26 @@ export function StudioShell({
         {/* Logo & Toggle */}
         <div className="h-16 flex items-center justify-between px-4 border-b border-studio-border">
           <Link href="/projects" className="flex items-center gap-3 overflow-hidden">
-            <div className="w-9 h-9 rounded-lg bg-gradient-to-tr from-cyan-500 to-indigo-600 flex items-center justify-center shrink-0 shadow-lg shadow-cyan-500/20">
-              <Clapperboard className="w-5 h-5 text-white" />
-            </div>
+            <ThemeIcon variant="gradient" gradient={{ from: "cyan", to: "indigo" }} size="lg" radius="md">
+              <Clapperboard size={20} className="text-white" />
+            </ThemeIcon>
             {isSidebarOpen && (
-              <span className="font-bold text-lg tracking-wider text-white">
+              <Text fw={800} size="lg" className="tracking-wider text-white">
                 DRAMA<span className="text-cyan-400">STUDIO</span>
-              </span>
+              </Text>
             )}
           </Link>
-          <button
-            onClick={toggleSidebar}
-            className="p-1.5 rounded-md hover:bg-studio-panel text-studio-muted hover:text-studio-text transition-colors"
-          >
-            <Menu className="w-4 h-4" />
-          </button>
+          <ActionIcon variant="subtle" color="gray" onClick={toggleSidebar} radius="md" size="md">
+            <Menu size={18} />
+          </ActionIcon>
         </div>
 
         {/* Navigation Items */}
         <div className="flex-1 py-4 overflow-y-auto px-2 space-y-1">
-          {projectId && (
-            <div className="px-3 pb-2 text-xs font-semibold text-studio-muted uppercase tracking-wider">
-              {isSidebarOpen && "Production Workflow"}
-            </div>
+          {projectId && isSidebarOpen && (
+            <Text size="xs" fw={700} c="dimmed" tt="uppercase" className="px-3 pb-2 tracking-wider">
+              Production Workflow
+            </Text>
           )}
 
           {projectId
@@ -94,41 +91,52 @@ export function StudioShell({
                     : pathname.startsWith(fullPath);
                 const Icon = item.icon;
 
-                return (
-                  <Link
+                const content = (
+                  <UnstyledButton
+                    component={Link}
                     key={item.label}
                     href={fullPath}
-                    className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                    className={`flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
                       isActive
                         ? "bg-cyan-500/10 text-cyan-400 border border-cyan-500/30"
                         : "text-studio-muted hover:text-studio-text hover:bg-studio-panel"
                     }`}
                   >
-                    <Icon className={`w-4 h-4 shrink-0 ${isActive ? "text-cyan-400" : ""}`} />
+                    <Icon size={18} className={`shrink-0 ${isActive ? "text-cyan-400" : ""}`} />
                     {isSidebarOpen && <span>{item.label}</span>}
-                  </Link>
+                  </UnstyledButton>
+                );
+
+                return isSidebarOpen ? (
+                  content
+                ) : (
+                  <Tooltip label={item.label} position="right" key={item.label} withArrow>
+                    {content}
+                  </Tooltip>
                 );
               })
             : (
-              <Link
+              <UnstyledButton
+                component={Link}
                 href="/projects"
-                className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium bg-cyan-500/10 text-cyan-400 border border-cyan-500/30"
+                className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm font-medium bg-cyan-500/10 text-cyan-400 border border-cyan-500/30"
               >
-                <FolderPlus className="w-4 h-4 shrink-0 text-cyan-400" />
+                <FolderPlus size={18} className="shrink-0 text-cyan-400" />
                 {isSidebarOpen && <span>All Productions</span>}
-              </Link>
+              </UnstyledButton>
             )}
         </div>
 
         {/* Footer Settings */}
         <div className="p-3 border-t border-studio-border">
-          <Link
+          <UnstyledButton
+            component={Link}
             href={projectId ? `/projects/${projectId}/settings` : "/settings"}
-            className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-studio-muted hover:text-studio-text hover:bg-studio-panel transition-colors"
+            className="flex items-center gap-3 w-full px-3 py-2 rounded-lg text-sm font-medium text-studio-muted hover:text-studio-text hover:bg-studio-panel transition-colors"
           >
-            <Settings className="w-4 h-4 shrink-0" />
+            <Settings size={18} className="shrink-0" />
             {isSidebarOpen && <span>Studio Settings</span>}
-          </Link>
+          </UnstyledButton>
         </div>
       </aside>
 
@@ -136,39 +144,44 @@ export function StudioShell({
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Studio Top Header */}
         <header className="h-16 bg-studio-card border-b border-studio-border flex items-center justify-between px-6 z-10">
-          <div className="flex items-center gap-4">
-            <button
+          <Group gap="md">
+            <UnstyledButton
               onClick={toggleCommandPalette}
               className="flex items-center gap-2 bg-studio-panel border border-studio-border px-3 py-1.5 rounded-lg text-xs text-studio-muted hover:text-studio-text hover:border-cyan-500/40 transition-all"
             >
-              <Search className="w-3.5 h-3.5 text-cyan-400" />
+              <Search size={14} className="text-cyan-400" />
               <span>Command Palette (Ctrl + K)</span>
-            </button>
+            </UnstyledButton>
 
             {projectId && (
-              <div className="flex items-center gap-2 text-xs text-studio-muted">
-                <ChevronRight className="w-3.5 h-3.5" />
-                <span className="px-2 py-0.5 rounded bg-cyan-500/10 text-cyan-400 font-semibold border border-cyan-500/20">
+              <Group gap="xs">
+                <ChevronRight size={14} className="text-studio-muted" />
+                <Badge color="cyan" variant="light" size="sm">
                   MONITORED MODE
-                </span>
-                <span className="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 font-medium border border-emerald-500/20 flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                </Badge>
+                <Badge color="emerald" variant="dot" size="sm">
                   Temporal Active
-                </span>
-              </div>
+                </Badge>
+              </Group>
             )}
-          </div>
+          </Group>
 
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2 bg-studio-panel px-3 py-1 rounded-full border border-studio-border text-xs">
-              <Cpu className="w-3.5 h-3.5 text-cyan-400" />
-              <span className="text-studio-muted">AI Capabilities:</span>
-              <span className="font-semibold text-studio-text">Wan 2.1 Video Provider</span>
-            </div>
-            <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-cyan-500 to-indigo-600 flex items-center justify-center text-white font-bold text-xs shadow-md">
-              DS
-            </div>
-          </div>
+          <Group gap="md">
+            <Badge
+              leftSection={<Cpu size={12} className="text-cyan-400" />}
+              variant="outline"
+              color="gray"
+              size="md"
+              radius="xl"
+            >
+              Wan 2.1 Video Engine
+            </Badge>
+            <ThemeIcon variant="gradient" gradient={{ from: "cyan", to: "indigo" }} size="md" radius="xl">
+              <Text size="xs" fw={700} c="white">
+                DS
+              </Text>
+            </ThemeIcon>
+          </Group>
         </header>
 
         {/* Workspace Content */}

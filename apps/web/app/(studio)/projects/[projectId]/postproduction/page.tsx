@@ -53,7 +53,7 @@ export default function PostproductionPage({ params }: { params: { projectId: st
             <CheckCircle2 className="w-4 h-4" />
             <span>FFmpeg Render Task Completed! Output URL: <strong>{renderResult.output_url}</strong></span>
           </div>
-          <span className="font-mono bg-emerald-500/20 px-2 py-0.5 rounded">{renderResult.resolution}</span>
+          <span className="bg-emerald-500/20 px-2 py-0.5 rounded text-emerald-300 font-semibold">{renderResult.resolution}</span>
         </div>
       )}
 
@@ -66,10 +66,10 @@ export default function PostproductionPage({ params }: { params: { projectId: st
           <div className="space-y-1">
             <span className="text-studio-muted font-semibold">Video Track (9:16 Vertical Shading)</span>
             <div className="h-12 bg-studio-panel border border-studio-border rounded-xl p-2 flex gap-2 overflow-x-auto">
-              <div className="h-full bg-cyan-500/20 border border-cyan-500/40 rounded px-3 flex items-center font-mono text-cyan-300 min-w-[140px]">
+              <div className="h-full bg-cyan-500/20 border border-cyan-500/40 rounded px-3 flex items-center text-cyan-300 font-semibold min-w-[140px]">
                 [Shot 001 - 0:00 - 0:05]
               </div>
-              <div className="h-full bg-indigo-500/20 border border-indigo-500/40 rounded px-3 flex items-center font-mono text-indigo-300 min-w-[140px]">
+              <div className="h-full bg-indigo-500/20 border border-indigo-500/40 rounded px-3 flex items-center text-indigo-300 font-semibold min-w-[140px]">
                 [Shot 002 - 0:05 - 0:10]
               </div>
             </div>
@@ -79,7 +79,7 @@ export default function PostproductionPage({ params }: { params: { projectId: st
           <div className="space-y-1">
             <span className="text-studio-muted font-semibold">Dialogue Track</span>
             <div className="h-10 bg-studio-panel border border-studio-border rounded-xl p-2 flex gap-2 overflow-x-auto">
-              <div className="h-full bg-pink-500/20 border border-pink-500/40 rounded px-3 flex items-center font-mono text-pink-300 min-w-[200px]">
+              <div className="h-full bg-pink-500/20 border border-pink-500/40 rounded px-3 flex items-center text-pink-300 font-semibold min-w-[200px]">
                 [Sarah: "Did you find the file?"]
               </div>
             </div>
@@ -89,7 +89,7 @@ export default function PostproductionPage({ params }: { params: { projectId: st
           <div className="space-y-1">
             <span className="text-studio-muted font-semibold">Score & Ambient SFX Track</span>
             <div className="h-10 bg-studio-panel border border-studio-border rounded-xl p-2 flex gap-2 overflow-x-auto">
-              <div className="h-full bg-emerald-500/20 border border-emerald-500/40 rounded px-3 flex items-center font-mono text-emerald-300 w-full">
+              <div className="h-full bg-emerald-500/20 border border-emerald-500/40 rounded px-3 flex items-center text-emerald-300 font-semibold w-full">
                 [Background Tension Score - Suspense Loop 120BPM]
               </div>
             </div>
