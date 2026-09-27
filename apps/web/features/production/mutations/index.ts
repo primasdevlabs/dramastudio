@@ -1,0 +1,1 @@
+export const useProductionMutation = () => ({ mutate: () => {} })
