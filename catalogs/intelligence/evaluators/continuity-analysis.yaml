@@ -1,0 +1,9 @@
+id: continuity-analysis
+version: 1
+name: Continuity Evaluator
+target: episode
+rules: [wardrobe-must-match-timeline, scene-time-ordering]
+skills: [continuity-analysis, canon-analysis]
+rubric:
+  - wardrobe state matches timeline
+  - no canon contradictions

@@ -1,0 +1,10 @@
+id: scene-writing
+version: 1
+domain: story
+purpose: "Write a scene that serves the episode arc."
+inputs: [scene_outline, characters, canon]
+outputs: [scene_script]
+method:
+  - enter late, leave early
+  - give every character an intention
+evaluation: [intention clarity, economy]

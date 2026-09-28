@@ -1,0 +1,9 @@
+id: dialogue-performance
+version: 1
+domain: audio
+purpose: "Direct line delivery performance."
+inputs: [dialogue, emotional_state]
+outputs: [performance_notes]
+method:
+  - mark intent per line
+evaluation: [authenticity]

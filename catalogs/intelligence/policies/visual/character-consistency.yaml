@@ -1,0 +1,14 @@
+id: character-consistency
+version: 4
+layer: system
+applies_to: [character, image_generation, video_generation]
+requirements:
+  canonical_reference_required: true
+  appearance_changes_require_approval: true
+  wardrobe_must_match_timeline: true
+  face_identity_preserve: true
+  voice_identity_preserve: true
+protected: [face_identity_preserve, canonical_reference_required]
+constraints:
+  - Always anchor generation to the character's canonical reference
+  - Any appearance change requires human approval

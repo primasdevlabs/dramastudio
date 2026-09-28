@@ -31,7 +31,7 @@ export function ProjectCard({ project }: { project: Project }) {
             {project.name}
           </Text>
           <Text size="xs" c="dimmed" className="line-clamp-2 mt-1">
-            {project.description || "Serialized AI Drama Production"}
+            {project.description || "Serialized Drama Production"}
           </Text>
         </div>
       </Stack>

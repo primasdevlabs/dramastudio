@@ -6,15 +6,38 @@ import (
 
 	"github.com/google/uuid"
 
+	"dramastudio/internal/platform/workflow/contracts"
 	"dramastudio/internal/production/domain"
 )
 
 type ProductionService struct {
-	repo domain.ProductionRepository
+	repo   domain.ProductionRepository
+	engine contracts.Engine // may be nil; set via SetEngine
 }
 
 func NewProductionService(repo domain.ProductionRepository) *ProductionService {
 	return &ProductionService{repo: repo}
+}
+
+// SetEngine injects the workflow engine port (§83). Called by the
+// composition root after construction to break the wiring cycle
+// (the engine's activities depend on this service).
+func (s *ProductionService) SetEngine(e contracts.Engine) {
+	s.engine = e
+}
+
+// signalRun delivers a control signal to the run's workflow when an
+// engine is configured. Best-effort: signal failures are logged but do
+// not fail the control operation itself.
+func (s *ProductionService) signalRun(ctx context.Context, runID, signal string, payload interface{}) {
+	if s.engine == nil {
+		return
+	}
+	run, err := s.repo.FindRunByID(ctx, runID)
+	if err != nil || run.WorkflowID == "" {
+		return
+	}
+	_ = s.engine.Signal(ctx, run.WorkflowID, signal, payload)
 }
 
 // ensureProduction creates the productions row for a project if absent.
@@ -48,6 +71,24 @@ func (s *ProductionService) StartRun(ctx context.Context, projectID, episodeID s
 	}
 	if err := s.repo.SaveRun(ctx, run); err != nil {
 		return nil, err
+	}
+	// Hand off to the workflow engine when configured: the pipeline runs
+	// durably there while the run row remains the production record.
+	if s.engine != nil {
+		wfID, err := s.engine.Start(ctx, contracts.ProduceEpisodeInput{
+			ProjectID:    projectID,
+			EpisodeID:    episodeID,
+			RunID:        run.ID,
+			BibleVersion: bibleVersion,
+		})
+		if err != nil {
+			return nil, err
+		}
+		run.WorkflowID = wfID
+		run.Status = domain.RunStatusRunning
+		if err := s.repo.SaveRun(ctx, run); err != nil {
+			return nil, err
+		}
 	}
 	return run, nil
 }
@@ -98,15 +139,27 @@ func (s *ProductionService) transitionRun(ctx context.Context, runID string, nex
 }
 
 func (s *ProductionService) PauseRun(ctx context.Context, runID string) (*domain.ProductionRun, error) {
-	return s.transitionRun(ctx, runID, domain.RunStatusPaused)
+	run, err := s.transitionRun(ctx, runID, domain.RunStatusPaused)
+	if err == nil {
+		s.signalRun(ctx, runID, contracts.SignalPause, "")
+	}
+	return run, err
 }
 
 func (s *ProductionService) ResumeRun(ctx context.Context, runID string) (*domain.ProductionRun, error) {
-	return s.transitionRun(ctx, runID, domain.RunStatusRunning)
+	run, err := s.transitionRun(ctx, runID, domain.RunStatusRunning)
+	if err == nil {
+		s.signalRun(ctx, runID, contracts.SignalResume, "")
+	}
+	return run, err
 }
 
 func (s *ProductionService) StopRun(ctx context.Context, runID string) (*domain.ProductionRun, error) {
-	return s.transitionRun(ctx, runID, domain.RunStatusStopped)
+	run, err := s.transitionRun(ctx, runID, domain.RunStatusStopped)
+	if err == nil {
+		s.signalRun(ctx, runID, contracts.SignalStop, "")
+	}
+	return run, err
 }
 
 // --- Jobs ---
@@ -196,6 +249,17 @@ func (s *ProductionService) CreateShot(ctx context.Context, shot *domain.Shot) (
 	return shot, nil
 }
 
+func (s *ProductionService) GetShot(ctx context.Context, id string) (*domain.Shot, error) {
+	return s.repo.FindShotByID(ctx, id)
+}
+
+func (s *ProductionService) UpdateShot(ctx context.Context, shot *domain.Shot) (*domain.Shot, error) {
+	if err := s.repo.SaveShot(ctx, shot); err != nil {
+		return nil, err
+	}
+	return shot, nil
+}
+
 func (s *ProductionService) ListShots(ctx context.Context, episodeID, sceneID string) ([]*domain.Shot, error) {
 	return s.repo.ListShots(ctx, episodeID, sceneID)
 }
@@ -262,7 +326,33 @@ func (s *ProductionService) Decide(ctx context.Context, approvalID string, decis
 	if err := s.repo.SaveApproval(ctx, a); err != nil {
 		return nil, err
 	}
+	// Forward the decision to any workflow waiting at an approval gate.
+	s.signalApproval(ctx, a, decision)
 	return a, nil
+}
+
+// signalApproval finds the run for an approval's episode and forwards the
+// decision to its workflow gate. Best-effort: approvals may target assets
+// or shots with no running workflow behind them.
+func (s *ProductionService) signalApproval(ctx context.Context, a *domain.ApprovalRequest, decision domain.ApprovalDecision) {
+	if s.engine == nil {
+		return
+	}
+	runs, err := s.repo.ListRunsByProject(ctx, a.ProjectID)
+	if err != nil {
+		return
+	}
+	var latest *domain.ProductionRun
+	for _, r := range runs {
+		if r.EpisodeID == a.EpisodeID && r.WorkflowID != "" &&
+			(latest == nil || r.CreatedAt.After(latest.CreatedAt)) {
+			latest = r
+		}
+	}
+	if latest == nil {
+		return
+	}
+	_ = s.engine.Signal(ctx, latest.WorkflowID, contracts.SignalApproval, string(decision))
 }
 
 // SubmitApproval is a convenience combining RequestApproval + Decide (scripted flows).

@@ -32,7 +32,7 @@ export default function ProjectsPage() {
               Active Drama Productions
             </Title>
             <Text size="xs" c="dimmed">
-              Manage serialized AI drama projects, series bibles, and production pipelines
+              Manage serialized drama productions, series bibles, and release schedules
             </Text>
           </Stack>
           <Button
@@ -44,7 +44,7 @@ export default function ProjectsPage() {
             size="sm"
             radius="sm"
           >
-            New Production
+            Create Series
           </Button>
         </Group>
       </Paper>
@@ -77,7 +77,7 @@ export default function ProjectsPage() {
                 No Productions Yet
               </Text>
               <Text size="xs" c="dimmed" mt={4}>
-                Start by initializing your first AI drama series project.
+                Define the series direction and initialize the first production.
               </Text>
             </div>
             <Button
@@ -89,7 +89,7 @@ export default function ProjectsPage() {
               size="sm"
               radius="sm"
             >
-              Create First Production
+              Create Series
             </Button>
           </Stack>
         </Paper>

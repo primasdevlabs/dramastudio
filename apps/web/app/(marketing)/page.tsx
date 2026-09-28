@@ -22,36 +22,36 @@ export default function LandingPage() {
 
       <main className="max-w-5xl mx-auto text-center py-20">
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded bg-studio-panel border border-studio-border text-studio-accent text-xs font-mono uppercase tracking-wider mb-8">
-          <Clapperboard className="w-3.5 h-3.5" /> Serialized AI Drama Production Workstation
+          <Clapperboard className="w-3.5 h-3.5" /> Serialized Drama Production Workstation
         </div>
         <h1 className="text-4xl md:text-6xl font-bold tracking-tight text-white mb-6">
-          AI Creates Content.<br/>The Studio Owns Reality.
+          Automated Production.<br/>Persistent Story Canon.
         </h1>
         <p className="text-lg md:text-xl text-studio-muted max-w-2xl mx-auto mb-10 leading-relaxed">
-          Orchestrate specialized AI model providers through an autonomous Lead Director agent. Turn story ideas into 150-episode serialized dramas with persistent story continuity.
+          Orchestrate specialized model backends through a Lead Director console. Turn story premises into 150-episode serialized dramas with persistent canon continuity.
         </p>
 
         <div className="flex flex-wrap justify-center gap-4 mb-16">
           <Link href="/projects" className="px-8 py-4 rounded bg-studio-accent text-white font-bold text-base hover:bg-studio-accent-dark transition flex items-center gap-3">
-            Open Studio Workspace <ArrowRight className="w-5 h-5" />
+            Open Studio Console <ArrowRight className="w-5 h-5" />
           </Link>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-left max-w-4xl mx-auto">
           <div className="p-6 rounded-md bg-studio-card border border-studio-border">
             <Bot className="w-8 h-8 text-studio-accent mb-4" />
-            <h3 className="font-bold text-white mb-2">Lead Director Agent</h3>
-            <p className="text-sm text-studio-muted leading-normal">Autonomous orchestration of story, visual, audio, editing, and QA sub-agents.</p>
+            <h3 className="font-bold text-white mb-2">Lead Director Console</h3>
+            <p className="text-sm text-studio-muted leading-normal">Orchestration of story, visual, audio, assembly, and continuity roles.</p>
           </div>
           <div className="p-6 rounded-md bg-studio-card border border-studio-border">
             <Cpu className="w-8 h-8 text-amber-400 mb-4" />
             <h3 className="font-bold text-white mb-2">Capability Model Policy</h3>
-            <p className="text-sm text-studio-muted leading-normal">Provider-agnostic model registry for script, dialogue, storyboard, Wan video, and TTS.</p>
+            <p className="text-sm text-studio-muted leading-normal">Provider-agnostic model registry for script, dialogue, storyboard, video shot, and voice track.</p>
           </div>
           <div className="p-6 rounded-md bg-studio-card border border-studio-border">
             <Layers className="w-8 h-8 text-emerald-400 mb-4" />
             <h3 className="font-bold text-white mb-2">Persistent Story Canon</h3>
-            <p className="text-sm text-studio-muted leading-normal">Fact knowledge graph & automated multi-faceted continuity validation across seasons.</p>
+            <p className="text-sm text-studio-muted leading-normal">Canon fact knowledge graph & automated multi-faceted continuity validation across seasons.</p>
           </div>
         </div>
       </main>

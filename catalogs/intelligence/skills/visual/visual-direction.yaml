@@ -1,0 +1,9 @@
+id: visual-direction
+version: 1
+domain: visual
+purpose: "Define the show's visual language."
+inputs: [premise, tone, visual_bible]
+outputs: [visual_language]
+method:
+  - define palette, lighting, lens language
+evaluation: [distinctness, repeatability]

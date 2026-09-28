@@ -1,0 +1,10 @@
+id: canon-policy
+version: 1
+layer: system
+applies_to: [story, episode_writing, scene_writing]
+requirements:
+  new_facts_must_not_contradict_canon: true
+  canon_supersedes_generated_content: true
+protected: [canon_supersedes_generated_content]
+constraints:
+  - Asserted facts must be checked against active canon before commit

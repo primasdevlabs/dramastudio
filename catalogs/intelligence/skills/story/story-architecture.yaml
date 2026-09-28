@@ -1,0 +1,11 @@
+id: story-architecture
+version: 1
+domain: story
+purpose: "Design series structure: premise, arcs, threads."
+inputs: [premise, genre, themes]
+outputs: [series_structure, story_graph]
+method:
+  - identify core dramatic engine
+  - map season arcs to the dramatic engine
+  - seed plot threads with payoff points
+evaluation: [coherent, layered, resolvable]

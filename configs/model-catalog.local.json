@@ -1,0 +1,38 @@
+{
+  "_comment": "Zero-spend development catalog. All capabilities route to the mock provider — deterministic outputs, no API keys, no cost. Select with MODEL_CATALOG=configs/model-catalog.local.json",
+  "providers": [
+    {"id": "mock", "name": "Mock (dev)", "type": "mock", "base_url": "", "api_key_env": ""}
+  ],
+  "models": [
+    {
+      "id": "mock.universal", "provider_id": "mock", "name": "Mock Universal", "identifier": "mock-universal",
+      "capabilities": ["lead_director","story_bible","story_architecture","season_planning","episode_planning","script_writing","dialogue_writing","continuity","quality_evaluation","vision","publishing_metadata","character_creation","location_creation","storyboard","image_generation","image_editing","video_generation","animation","voice","music","sfx_generation","speech_to_text"],
+      "modalities": {"input": ["text","image","audio"], "output": ["text","json","image","video","audio"]},
+      "status": "active"
+    }
+  ],
+  "policies": [
+    {"capability": "lead_director",       "provider_id": "mock", "model_id": "mock.universal", "routing_strategy": "primary_only"},
+    {"capability": "story_bible",         "provider_id": "mock", "model_id": "mock.universal", "routing_strategy": "primary_only"},
+    {"capability": "story_architecture",  "provider_id": "mock", "model_id": "mock.universal", "routing_strategy": "primary_only"},
+    {"capability": "season_planning",     "provider_id": "mock", "model_id": "mock.universal", "routing_strategy": "primary_only"},
+    {"capability": "episode_planning",    "provider_id": "mock", "model_id": "mock.universal", "routing_strategy": "primary_only"},
+    {"capability": "script_writing",      "provider_id": "mock", "model_id": "mock.universal", "routing_strategy": "primary_only"},
+    {"capability": "dialogue_writing",    "provider_id": "mock", "model_id": "mock.universal", "routing_strategy": "primary_only"},
+    {"capability": "continuity",          "provider_id": "mock", "model_id": "mock.universal", "routing_strategy": "primary_only"},
+    {"capability": "quality_evaluation",  "provider_id": "mock", "model_id": "mock.universal", "routing_strategy": "primary_only"},
+    {"capability": "vision",              "provider_id": "mock", "model_id": "mock.universal", "routing_strategy": "primary_only"},
+    {"capability": "publishing_metadata", "provider_id": "mock", "model_id": "mock.universal", "routing_strategy": "primary_only"},
+    {"capability": "character_creation",  "provider_id": "mock", "model_id": "mock.universal", "routing_strategy": "primary_only"},
+    {"capability": "location_creation",   "provider_id": "mock", "model_id": "mock.universal", "routing_strategy": "primary_only"},
+    {"capability": "storyboard",          "provider_id": "mock", "model_id": "mock.universal", "routing_strategy": "primary_only"},
+    {"capability": "image_generation",    "provider_id": "mock", "model_id": "mock.universal", "routing_strategy": "primary_only"},
+    {"capability": "image_editing",       "provider_id": "mock", "model_id": "mock.universal", "routing_strategy": "primary_only"},
+    {"capability": "video_generation",    "provider_id": "mock", "model_id": "mock.universal", "routing_strategy": "primary_only"},
+    {"capability": "animation",           "provider_id": "mock", "model_id": "mock.universal", "routing_strategy": "primary_only"},
+    {"capability": "voice",               "provider_id": "mock", "model_id": "mock.universal", "routing_strategy": "primary_only"},
+    {"capability": "music",               "provider_id": "mock", "model_id": "mock.universal", "routing_strategy": "primary_only"},
+    {"capability": "sfx_generation",      "provider_id": "mock", "model_id": "mock.universal", "routing_strategy": "primary_only"},
+    {"capability": "speech_to_text",      "provider_id": "mock", "model_id": "mock.universal", "routing_strategy": "primary_only"}
+  ]
+}

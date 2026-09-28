@@ -1,6 +1,6 @@
-@import "tailwindcss";
 @import "@mantine/core/styles.css";
 @import "@mantine/notifications/styles.css";
+@import "tailwindcss";
 
 @theme {
   --color-studio-bg: #151514;
@@ -17,14 +17,42 @@
 }
 
 :root {
+  --font-sans: var(--font-inter), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --mantine-font-family: var(--font-inter), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --mantine-font-family-monospace: var(--font-inter), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --background: #151514;
   --foreground: #F2EEE7;
+}
+
+/* Force Inter font family on all body elements, Mantine components, and UI descriptions */
+body,
+*,
+button,
+input,
+select,
+textarea,
+p,
+span,
+label,
+div,
+kbd,
+code,
+pre,
+.mantine-Text-root,
+.mantine-Input-description,
+.mantine-Select-description,
+.mantine-NumberInput-description,
+.mantine-Tabs-tab,
+.mantine-Menu-item,
+.mantine-Modal-title,
+.mantine-Alert-title,
+.mantine-Badge-root {
+  font-family: var(--font-inter), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
 }
 
 body {
   color: var(--foreground);
   background: var(--background);
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   overflow-x: hidden;
 }
 

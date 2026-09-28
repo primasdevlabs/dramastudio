@@ -1,0 +1,15 @@
+id: editor
+version: 1
+name: Editor
+role: editing
+responsibilities:
+  - assemble shots into the episode cut
+skills: [editing, assembly, pacing]
+policies: [approval-policy]
+rules: []
+permissions:
+  read: [production, media]
+  write: [edl, episode_cut]
+  approve: []
+model_capability: episode_planning
+context: {episode_outline: true, assets: true}

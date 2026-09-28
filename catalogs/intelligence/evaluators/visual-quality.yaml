@@ -1,0 +1,11 @@
+id: visual-quality
+version: 1
+name: Visual Evaluator
+target: video
+rules: [no-character-without-reference]
+skills: [visual-quality]
+model_capability: quality_evaluation
+rubric:
+  - character identity matches reference
+  - composition matches shot spec
+  - no visual artifacts

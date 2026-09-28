@@ -1,0 +1,9 @@
+id: pacing
+version: 1
+domain: postproduction
+purpose: "Tune rhythm across the episode."
+inputs: [cut, act_structure]
+outputs: [pacing_adjustments]
+method:
+  - vary shot length by intensity
+evaluation: [arc-shaped tension]

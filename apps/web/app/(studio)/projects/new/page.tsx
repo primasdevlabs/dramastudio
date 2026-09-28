@@ -96,7 +96,7 @@ export default function NewProjectPage() {
               Create Drama Production
             </Title>
             <Text size="xs" c="dimmed" mt={2}>
-              Set up your new AI drama series workspace, configure model capability policies, and define story canon rules.
+              Set up your new drama series production, configure model capability policies, and define story canon rules.
             </Text>
           </div>
         </Group>

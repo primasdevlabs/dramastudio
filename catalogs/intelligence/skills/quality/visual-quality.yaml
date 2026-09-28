@@ -1,0 +1,9 @@
+id: visual-quality
+version: 1
+domain: quality
+purpose: "Judge visual output quality."
+inputs: [frames, references]
+outputs: [qa_report]
+method:
+  - artifacts, identity, composition
+evaluation: [pass rate]

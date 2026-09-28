@@ -1,0 +1,9 @@
+id: character-design
+version: 1
+domain: visual
+purpose: "Design canonical character appearance."
+inputs: [character_bible, visual_bible]
+outputs: [canonical_reference]
+method:
+  - lock face, silhouette, palette
+evaluation: [recognizability]

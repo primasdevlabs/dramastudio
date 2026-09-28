@@ -31,22 +31,23 @@ type ProductionRun struct {
 	CompletedAt  *time.Time             `json:"completed_at,omitempty"`
 }
 
-// CanTransitionTo enforces the run state machine (§37).
+// runTransitions encodes the run state machine (§37).
+var runTransitions = map[RunStatus][]RunStatus{
+	RunStatusPending:          {RunStatusRunning, RunStatusStopped},
+	RunStatusRunning:          {RunStatusPaused, RunStatusAwaitingApproval, RunStatusCompleted, RunStatusFailed, RunStatusStopped},
+	RunStatusPaused:           {RunStatusRunning, RunStatusStopped},
+	RunStatusAwaitingApproval: {RunStatusRunning, RunStatusFailed, RunStatusStopped},
+	RunStatusFailed:           {RunStatusPending}, // retry re-queues the run
+	RunStatusCompleted:        {},
+	RunStatusStopped:          {},
+}
+
+// CanTransitionTo reports whether the run may move to next.
 func (r *ProductionRun) CanTransitionTo(next RunStatus) bool {
-	switch r.Status {
-	case RunStatusPending:
-		return next == RunStatusRunning || next == RunStatusStopped
-	case RunStatusRunning:
-		return next == RunStatusPaused || next == RunStatusAwaitingApproval ||
-			next == RunStatusCompleted || next == RunStatusFailed || next == RunStatusStopped
-	case RunStatusPaused:
-		return next == RunStatusRunning || next == RunStatusStopped
-	case RunStatusAwaitingApproval:
-		return next == RunStatusRunning || next == RunStatusFailed || next == RunStatusStopped
-	case RunStatusFailed:
-		return next == RunStatusPending // retry re-queues the run
-	case RunStatusCompleted, RunStatusStopped:
-		return false
+	for _, allowed := range runTransitions[r.Status] {
+		if allowed == next {
+			return true
+		}
 	}
 	return false
 }

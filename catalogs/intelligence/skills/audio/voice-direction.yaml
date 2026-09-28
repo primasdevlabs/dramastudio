@@ -1,0 +1,10 @@
+id: voice-direction
+version: 1
+domain: audio
+purpose: "Cast and direct voices per character."
+inputs: [characters, dialogue]
+outputs: [voice_direction]
+method:
+  - match timbre to character
+  - keep identity stable
+evaluation: [voice consistency]

@@ -20,7 +20,7 @@ export default function ContinuityCenterPage({ params }: { params: { projectId: 
   const resolveMutation = useMutation({
     mutationFn: async (issueId: string) => {
       return api.post(`/v1/continuity/issues/${issueId}/resolve`, {
-        resolution: "Corrected asset prompt to match canon wardrobe specification",
+        resolution: "Corrected shot brief to match canon wardrobe specification",
       });
     },
     onSuccess: () => {
@@ -31,9 +31,9 @@ export default function ContinuityCenterPage({ params }: { params: { projectId: 
   return (
     <div className="max-w-7xl mx-auto space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between bg-studio-card border border-studio-border p-6 rounded-2xl shadow-xl">
+      <div className="flex items-center justify-between bg-studio-card border border-studio-border p-6 rounded-md">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-rose-500/10 border border-rose-500/30 flex items-center justify-center text-rose-400">
+          <div className="w-10 h-10 rounded bg-rose-500/10 border border-rose-500/30 flex items-center justify-center text-rose-400">
             <ShieldCheck className="w-5 h-5" />
           </div>
           <div>
@@ -46,12 +46,12 @@ export default function ContinuityCenterPage({ params }: { params: { projectId: 
       {/* Issues List */}
       <div className="space-y-4">
         {isLoading ? (
-          [1, 2].map((i) => <div key={i} className="h-32 bg-studio-card rounded-xl animate-pulse" />)
+          [1, 2].map((i) => <div key={i} className="h-32 bg-studio-card rounded animate-pulse" />)
         ) : issues && issues.length > 0 ? (
           issues.map((issue) => (
             <div
               key={issue.id}
-              className={`bg-studio-card border rounded-2xl p-5 space-y-3 transition-all ${
+              className={`bg-studio-card border rounded-md p-5 space-y-3 transition-all ${
                 issue.is_resolved
                   ? "border-emerald-500/30 bg-emerald-500/5"
                   : issue.severity === "BLOCKING"
@@ -94,7 +94,7 @@ export default function ContinuityCenterPage({ params }: { params: { projectId: 
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs bg-studio-panel p-3.5 rounded-xl border border-studio-border/60">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs bg-studio-panel p-3.5 rounded border border-studio-border/60">
                 <div>
                   <span className="text-studio-muted font-semibold">Expected Canonical State:</span>
                   <p className="text-emerald-400 font-semibold mt-0.5">{issue.expected_state}</p>
@@ -113,7 +113,7 @@ export default function ContinuityCenterPage({ params }: { params: { projectId: 
             </div>
           ))
         ) : (
-          <div className="bg-studio-card border border-studio-border rounded-2xl p-8 text-center text-studio-muted text-xs">
+          <div className="bg-studio-card border border-studio-border rounded-md p-8 text-center text-studio-muted text-xs">
             No continuity issues flagged. All story, wardrobe, and visual assets match canonical truth.
           </div>
         )}

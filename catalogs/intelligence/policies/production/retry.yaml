@@ -1,0 +1,6 @@
+id: retry-policy
+version: 1
+layer: system
+requirements:
+  max_attempts: 3
+  retryable_kinds: [rate_limited, unavailable, timeout]

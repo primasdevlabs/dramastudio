@@ -1,0 +1,15 @@
+id: character-director
+version: 1
+name: Character Director
+role: character_direction
+responsibilities:
+  - own canonical character design and references
+skills: [character-design, character-development]
+policies: [character-consistency]
+rules: [no-character-without-reference]
+permissions:
+  read: [story, characters, canon]
+  write: [character_assets]
+  approve: [character_designs]
+model_capability: image_generation
+context: {series_bible: true, characters: true, visual_bible: true}

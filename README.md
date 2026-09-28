@@ -114,6 +114,48 @@ Generated Artifact
 
 This allows the studio to use different providers for different capabilities and replace them without redesigning the production system.
 
+The same ports/adapters rule applies to all infrastructure: bounded contexts depend on vendor-neutral ports (`ObjectStorage`, `WorkflowEngine`, `VideoGenerator`, `ImageGenerator`, `VoiceGenerator`, `ChannelAdapter`, `Authenticator`) and never on vendor names. Adapters are selected by configuration only:
+
+```text
+STORAGE_BACKEND=local|s3            # s3 covers AWS S3, Cloudflare R2, MinIO via S3_ENDPOINT
+WORKFLOW_ENGINE=local|temporal      # local = in-process pipeline; temporal = durable worker
+DRAMASTUDIO_STORE=sqlite|postgres|memory
+DATABASE_PATH=data/dramastudio.db   # sqlite file (DRAMASTUDIO_STORE=sqlite)
+DATABASE_URL=postgres://...         # postgres DSN (DRAMASTUDIO_STORE=postgres)
+MODEL_CATALOG=configs/model-catalog.local.json  # zero-spend dev catalog (all-mock policies)
+```
+
+The three deployment profiles:
+
+```text
+local        DRAMASTUDIO_ENV=development (default)
+             SQLite + local filesystem + local workflow engine + mock-capable providers
+             → go run ./apps/api works with no servers and no API spend
+
+test         DRAMASTUDIO_ENV=test
+             SQLite (or ephemeral PostgreSQL) + fake providers + deterministic workflows
+
+production   DRAMASTUDIO_ENV=production|staging
+             PostgreSQL + S3-compatible storage + Temporal + real AI providers
+```
+
+SQLite is an explicit development/test adapter, not a production database:
+`internal/platform/database/sqlite` implements the same `postgres.Querier`
+port the repositories use, translating the dialect ($N placeholders, schema-
+qualified names, JSONB containment) at the boundary — all fourteen repository
+implementations run unchanged on both drivers, and `sqlite.Migrate` derives
+the SQLite schema from the same `migrations/` files. Use PostgreSQL for
+concurrency, multi-worker, and production-like testing.
+
+Self-hosted / cloud modes:
+
+```text
+Self-hosted:    Go + PostgreSQL + MinIO        + FFmpeg + external AI APIs
+Cloud:          Go + PostgreSQL + S3/R2        + FFmpeg + external AI APIs
+```
+
+**Rule: never let an infrastructure vendor become a domain concept.**
+
 For example:
 
 ```text
@@ -135,6 +177,39 @@ Voice Generation
 ```
 
 The production system remains independent of those providers.
+
+### Production Intelligence Layer
+
+The pipeline consumes a structured intelligence subsystem rather than
+embedding behavior in workflows or prompts. `internal/intelligence/` holds
+five versioned, editable concepts — loaded from `catalogs/intelligence/`
+as YAML data (see `INTELLIGENCE_DIR`):
+
+- **Agents** (`agents/`) — role definitions: responsibilities, skills,
+  policies, rules, permissions, context spec, model capability.
+- **Skills** (`skills/`) — reusable methodology + I/O + evaluation criteria
+  shared across agents (cinematography serves Video Director, Shot Designer,
+  and Quality Supervisor alike).
+- **Policies** (`policies/`) — layered operational constraints
+  (system → studio → project → series → season → episode → task); lower
+  layers cannot weaken keys a higher layer marked `protected`.
+- **Rules** (`rules/`) — small deterministic predicates evaluated by the
+  rules engine, never left to model interpretation (`severity` INFO→BLOCKING,
+  `enforcement` ADVISORY→BLOCK).
+- **Evaluators** (`evaluators/`) — independent output assessment:
+  deterministic rule checks + optional model review.
+
+Runtime flow: `Task → ResolveExecution → AgentExecutionContext (agent +
+skills + effective policies + applicable rules + evaluators + permission
+scope) → prompt assembly → model routing → post-rule validation →
+evaluation → ExecutionRecord`. Every run audits agent/skill/policy/rule/
+evaluator versions + provider/model/version + prompt and context hashes —
+episode 40 stays reproducible after skills move to v3.
+
+REST surface: `GET /v1/intelligence/{agents,skills,policies,rules,evaluators}`,
+`POST /v1/intelligence/context` (preview), `POST /v1/intelligence/execute`,
+`POST /v1/intelligence/policies/{id}/layers` (scoped override),
+`GET /v1/projects/{id}/intelligence/executions` (audit).
 
 ### The AI Production Team
 
@@ -288,7 +363,7 @@ dramastudio/
 │   │   ├── storage/          # Object storage abstractions
 │   │   ├── events/           # Domain event bus & contracts
 │   │   ├── messaging/        # Pub/Sub messaging
-│   │   ├── workflow/         # Temporal durable workflows
+│   │   ├── workflow/         # Engine port + adapters (contracts/, temporal/, local/)
 │   │   ├── ai/               # Low-level LLM / Embedding adapters
 │   │   ├── media/            # Media processing utilities
 │   │   ├── observability/    # Structured logging, metrics, tracing

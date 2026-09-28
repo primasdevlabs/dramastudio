@@ -25,7 +25,8 @@ const factCols = `id, project_id, entity_id, subject, predicate, object, fact_ty
 
 func (r *PostgresCanonRepository) SaveFact(ctx context.Context, f *domain.StoryFact) error {
 	_, err := r.q.Exec(ctx, `
-		INSERT INTO canon.story_facts (`+factCols+`)
+		INSERT INTO canon.story_facts (id, project_id, entity_id, subject, predicate, object, fact_type,
+	introduced_episode, effective_from, effective_until, source, confidence, status, version, created_at)
 		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)
 		ON CONFLICT (id) DO UPDATE SET
 			entity_id = EXCLUDED.entity_id, subject = EXCLUDED.subject,
@@ -41,12 +42,14 @@ func (r *PostgresCanonRepository) SaveFact(ctx context.Context, f *domain.StoryF
 }
 
 func (r *PostgresCanonRepository) FindFactByID(ctx context.Context, id string) (*domain.StoryFact, error) {
-	row := r.q.QueryRow(ctx, `SELECT `+factCols+` FROM canon.story_facts WHERE id = $1`, id)
+	row := r.q.QueryRow(ctx, `SELECT id, project_id, entity_id, subject, predicate, object, fact_type,
+	introduced_episode, effective_from, effective_until, source, confidence, status, version, created_at FROM canon.story_facts WHERE id = $1`, id)
 	return scanFact(row)
 }
 
 func (r *PostgresCanonRepository) ListFacts(ctx context.Context, projectID string) ([]*domain.StoryFact, error) {
-	rows, err := r.q.Query(ctx, `SELECT `+factCols+` FROM canon.story_facts WHERE project_id = $1 ORDER BY created_at`, projectID)
+	rows, err := r.q.Query(ctx, `SELECT id, project_id, entity_id, subject, predicate, object, fact_type,
+	introduced_episode, effective_from, effective_until, source, confidence, status, version, created_at FROM canon.story_facts WHERE project_id = $1 ORDER BY created_at`, projectID)
 	if err != nil {
 		return nil, err
 	}
@@ -63,7 +66,8 @@ func (r *PostgresCanonRepository) ListFacts(ctx context.Context, projectID strin
 }
 
 func (r *PostgresCanonRepository) ListFactsForEntity(ctx context.Context, projectID, entityID string) ([]*domain.StoryFact, error) {
-	rows, err := r.q.Query(ctx, `SELECT `+factCols+` FROM canon.story_facts WHERE project_id = $1 AND (entity_id = $2 OR subject = $2) ORDER BY created_at`, projectID, entityID)
+	rows, err := r.q.Query(ctx, `SELECT id, project_id, entity_id, subject, predicate, object, fact_type,
+	introduced_episode, effective_from, effective_until, source, confidence, status, version, created_at FROM canon.story_facts WHERE project_id = $1 AND (entity_id = $2 OR subject = $2) ORDER BY created_at`, projectID, entityID)
 	if err != nil {
 		return nil, err
 	}

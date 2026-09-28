@@ -31,14 +31,14 @@ func (h *ProjectsHandler) RegisterRoutes(mux *http.ServeMux) {
 }
 
 type createProjectReq struct {
-	Name        string                `json:"name"`
-	Description string                `json:"description"`
-	Genre       string                `json:"genre"`
-	Language    string                `json:"language"`
-	Mode        domain.ProductionMode `json:"mode"`
-	Settings    domain.Settings       `json:"settings"`
+	Name        string                  `json:"name"`
+	Description string                  `json:"description"`
+	Genre       string                  `json:"genre"`
+	Language    string                  `json:"language"`
+	Mode        domain.ProductionMode   `json:"mode"`
+	Settings    domain.Settings         `json:"settings"`
 	Policy      domain.ProductionPolicy `json:"policy"`
-	Budget      domain.Budget         `json:"budget"`
+	Budget      domain.Budget           `json:"budget"`
 }
 
 func (r *createProjectReq) Validate() error {
@@ -108,14 +108,14 @@ func (h *ProjectsHandler) getProject(w http.ResponseWriter, r *http.Request) {
 }
 
 type updateProjectReq struct {
-	Name        *string                 `json:"name"`
-	Description *string                 `json:"description"`
-	Genre       *string                 `json:"genre"`
-	Language    *string                 `json:"language"`
-	Mode        *domain.ProductionMode  `json:"mode"`
-	Settings    *domain.Settings        `json:"settings"`
+	Name        *string                  `json:"name"`
+	Description *string                  `json:"description"`
+	Genre       *string                  `json:"genre"`
+	Language    *string                  `json:"language"`
+	Mode        *domain.ProductionMode   `json:"mode"`
+	Settings    *domain.Settings         `json:"settings"`
 	Policy      *domain.ProductionPolicy `json:"policy"`
-	Budget      *domain.Budget          `json:"budget"`
+	Budget      *domain.Budget           `json:"budget"`
 }
 
 func (r *updateProjectReq) Validate() error {

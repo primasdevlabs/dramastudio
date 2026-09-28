@@ -47,7 +47,7 @@ export default function StoryboardPage({ params }: { params: { projectId: string
           </div>
           <div>
             <h1 className="text-xl font-bold text-white">Storyboard & Shot Visualizer</h1>
-            <p className="text-xs text-studio-muted">Plan camera specs, 9:16 vertical video shots, and trigger Wan Video Model provider generations</p>
+            <p className="text-xs text-studio-muted">Plan camera specs, framing, 9:16 vertical video shots, and render visual takes</p>
           </div>
         </div>
       </div>
@@ -56,12 +56,12 @@ export default function StoryboardPage({ params }: { params: { projectId: string
       <div className="bg-studio-card border border-studio-border rounded-md p-5 space-y-4">
         <div className="flex items-center gap-2">
           <Camera className="w-4 h-4 text-studio-accent" />
-          <h2 className="text-sm font-bold text-white">Wan 3.0 / Wan 2.1 Video Shot Engine</h2>
+          <h2 className="text-sm font-bold text-white">Video Shot Production Engine</h2>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div className="md:col-span-2">
-            <label className="block text-xs font-semibold text-studio-muted mb-1">Structured Prompt / Shot Direction</label>
+            <label className="block text-xs font-semibold text-studio-muted mb-1">Shot Direction & Framing Brief</label>
             <input
               type="text"
               value={prompt}
@@ -87,7 +87,7 @@ export default function StoryboardPage({ params }: { params: { projectId: string
               className="w-full inline-flex items-center justify-center gap-2 bg-studio-accent hover:bg-studio-accent-dark text-white font-medium text-xs py-2.5 rounded transition-colors"
             >
               <Camera className="w-4 h-4" />
-              {generateMutation.isPending ? "Generating via Wan..." : "Generate Video Shot"}
+              {generateMutation.isPending ? "Generating shot..." : "Generate Video Shot"}
             </button>
           </div>
         </div>
@@ -125,7 +125,7 @@ export default function StoryboardPage({ params }: { params: { projectId: string
                 </p>
 
                 <div className="flex items-center justify-between text-xs pt-2 border-t border-studio-border/60 font-mono">
-                  <span className="text-studio-muted">Gen 04</span>
+                  <span className="text-studio-muted">Take 01</span>
                   <span className="text-emerald-400 font-semibold">${asset.cost || 0.05}</span>
                 </div>
               </div>
@@ -133,7 +133,7 @@ export default function StoryboardPage({ params }: { params: { projectId: string
           ))
         ) : (
           <div className="col-span-full bg-studio-card border border-studio-border rounded-md p-12 text-center text-studio-muted text-xs">
-            No video shots generated yet. Use the shot generator above to trigger Wan Video model generation.
+            No video shots created yet. Define a shot brief above to generate the first shot take.
           </div>
         )}
       </div>

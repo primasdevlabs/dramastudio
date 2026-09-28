@@ -1,0 +1,10 @@
+id: foreshadowing
+version: 1
+domain: story
+purpose: "Plant setups that pay off later."
+inputs: [plot_threads, story_graph]
+outputs: [foreshadow_beats]
+method:
+  - identify payoff targets
+  - insert early setups
+evaluation: [subtlety, payoff distance]

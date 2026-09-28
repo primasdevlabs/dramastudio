@@ -1,0 +1,15 @@
+id: dialogue-writer
+version: 1
+name: Dialogue Writer
+role: dialogue_writing
+responsibilities:
+  - write character-consistent dialogue
+skills: [dialogue-writing, character-development]
+policies: [canon-policy]
+rules: []
+permissions:
+  read: [story, canon, characters]
+  write: [dialogue]
+  approve: []
+model_capability: dialogue_writing
+context: {episode_outline: true, characters: true, canon: true}

@@ -1,0 +1,9 @@
+id: music-direction
+version: 1
+domain: audio
+purpose: "Score within sonic identity."
+inputs: [episode_tone, motif_map]
+outputs: [score_brief]
+method:
+  - assign motifs per character/arc
+evaluation: [thematic fit]

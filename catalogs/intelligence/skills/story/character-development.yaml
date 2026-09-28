@@ -1,0 +1,9 @@
+id: character-development
+version: 1
+domain: story
+purpose: "Grow character states within canon."
+inputs: [characters, canon, timeline]
+outputs: [character_states]
+method:
+  - track wounds, wants, knowledge
+evaluation: [consistency, growth]

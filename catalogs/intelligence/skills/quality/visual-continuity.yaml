@@ -1,0 +1,9 @@
+id: visual-continuity
+version: 1
+domain: quality
+purpose: "Keep visual representation consistent."
+inputs: [character_refs, wardrobe, prior_frames]
+outputs: [findings]
+method:
+  - compare generated frames to canonical references
+evaluation: [identity drift]

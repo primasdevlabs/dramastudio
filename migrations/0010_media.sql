@@ -35,3 +35,23 @@ CREATE TABLE IF NOT EXISTS media.asset_versions (
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     UNIQUE (asset_id, version)
 );
+
+CREATE TABLE IF NOT EXISTS media.generation_jobs (
+    id              TEXT PRIMARY KEY,
+    project_id      TEXT NOT NULL,
+    asset_id        TEXT NOT NULL DEFAULT '',
+    capability      TEXT NOT NULL DEFAULT '',
+    provider        TEXT NOT NULL DEFAULT '',
+    model           TEXT NOT NULL DEFAULT '',
+    provider_job_id TEXT NOT NULL DEFAULT '',
+    input           TEXT NOT NULL DEFAULT '',
+    output_url      TEXT NOT NULL DEFAULT '',
+    status          TEXT NOT NULL DEFAULT 'PENDING',
+    attempt         INT NOT NULL DEFAULT 0,
+    cost            DOUBLE PRECISION NOT NULL DEFAULT 0,
+    error           TEXT NOT NULL DEFAULT '',
+    started_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+    completed_at    TIMESTAMPTZ
+);
+CREATE INDEX IF NOT EXISTS idx_genjobs_project ON media.generation_jobs(project_id);
+CREATE INDEX IF NOT EXISTS idx_genjobs_provider ON media.generation_jobs(provider_job_id);

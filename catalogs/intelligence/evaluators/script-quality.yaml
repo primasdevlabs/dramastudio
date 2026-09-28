@@ -1,0 +1,11 @@
+id: script-quality
+version: 1
+name: Script Evaluator
+target: script
+rules: []
+skills: [script-quality]
+model_capability: quality_evaluation
+rubric:
+  - structure serves the arc
+  - dialogue is voice-consistent
+  - no canon contradictions

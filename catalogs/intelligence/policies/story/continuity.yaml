@@ -1,0 +1,8 @@
+id: continuity-policy
+version: 1
+layer: system
+requirements:
+  blocking_issues_halt_render: true
+  wardrobe_changes_tracked: true
+constraints:
+  - Report drift as findings, never silently retcon

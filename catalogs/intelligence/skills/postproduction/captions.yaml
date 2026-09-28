@@ -1,0 +1,9 @@
+id: captions
+version: 1
+domain: postproduction
+purpose: "Author captions/subtitles."
+inputs: [dialogue, timeline]
+outputs: [captions]
+method:
+  - 42-char lines, shot-boundary safe
+evaluation: [readability]

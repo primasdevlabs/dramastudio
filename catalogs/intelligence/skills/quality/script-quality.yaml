@@ -1,0 +1,9 @@
+id: script-quality
+version: 1
+domain: quality
+purpose: "Judge script quality."
+inputs: [script, canon, characters]
+outputs: [qa_report]
+method:
+  - structure, dialogue, canon fit
+evaluation: [pass rate]

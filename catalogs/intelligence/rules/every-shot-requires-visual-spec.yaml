@@ -1,0 +1,11 @@
+id: every-shot-requires-visual-spec
+version: 1
+name: Shots need an approved visual spec
+when: {action: generate_shot}
+requires:
+  - shot.visual_spec != null
+severity: BLOCKING
+enforcement: BLOCK
+on_failure:
+  action: block
+  message: Every shot requires a visual specification.

@@ -1,0 +1,8 @@
+id: generation-policy
+version: 1
+layer: system
+requirements:
+  provenance_required: true
+  fallback_on_retryable_failure: true
+constraints:
+  - Record provider, model and version on every artifact

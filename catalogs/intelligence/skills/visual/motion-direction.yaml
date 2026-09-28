@@ -1,0 +1,9 @@
+id: motion-direction
+version: 1
+domain: visual
+purpose: "Direct motion within shots."
+inputs: [shot_spec, emotional_state]
+outputs: [motion_spec]
+method:
+  - define subject and camera motion
+evaluation: [motion serves emotion]

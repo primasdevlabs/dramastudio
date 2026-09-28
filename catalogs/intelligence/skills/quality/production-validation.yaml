@@ -1,0 +1,9 @@
+id: production-validation
+version: 1
+domain: quality
+purpose: "Validate production completeness."
+inputs: [assets, specs, approvals]
+outputs: [qa_report]
+method:
+  - every spec has an approved asset
+evaluation: [coverage]

@@ -1,0 +1,9 @@
+id: production-budget
+version: 1
+layer: system
+requirements:
+  budget_currency: USD
+  requires_budget_check_before_dispatch: true
+protected: [budget_currency]
+constraints:
+  - Never dispatch generation that exceeds remaining budget

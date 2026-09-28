@@ -77,10 +77,10 @@ export default function ProductionControlTowerPage({ params }: { params: { proje
             </ThemeIcon>
             <div>
               <Title order={3} c="white">
-                Production Control Tower
+                Production Console
               </Title>
               <Text size="xs" c="dimmed">
-                Lead Director console, active Temporal workflows, and human approval gates
+                Lead Director console, active production workflows, and human approval gates
               </Text>
             </div>
           </Group>
@@ -94,7 +94,7 @@ export default function ProductionControlTowerPage({ params }: { params: { proje
             size="sm"
             radius="sm"
           >
-            Trigger Lead Director Loop
+            Execute Lead Director Step
           </Button>
         </Group>
       </Paper>
@@ -110,12 +110,12 @@ export default function ProductionControlTowerPage({ params }: { params: { proje
               </Text>
             </Group>
             <Badge color="amber" variant="light" size="sm" className="font-mono">
-              Temporal Workflow Paused
+              Production Workflow Paused
             </Badge>
           </Group>
 
           <Text size="xs" c="white">
-            Episode 01 Storyboard & Wan Video Generations require human approval before advancing to FFmpeg Postproduction Assembly.
+            Episode 01 Storyboard & Shot Generations require human approval before advancing to Assembly.
           </Text>
 
           <Group gap="sm" pt="xs">
@@ -186,7 +186,7 @@ export default function ProductionControlTowerPage({ params }: { params: { proje
                 ))
               ) : (
                 <Text size="xs" c="dimmed" fs="italic" ta="center" py="md">
-                  No decisions recorded yet. Click "Trigger Lead Director Loop" above.
+                  No decisions recorded yet. Click "Execute Lead Director Step" above.
                 </Text>
               )}
             </Stack>

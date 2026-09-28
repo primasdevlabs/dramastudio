@@ -1,0 +1,11 @@
+id: scene-time-ordering
+version: 1
+name: Scene start must not precede previous scene end
+when: {action: validate_timeline}
+requires:
+  - scene.start_time >= scene.previous_end_time
+severity: ERROR
+enforcement: REQUIRE_REVIEW
+on_failure:
+  action: flag
+  message: Scene time ordering violation.

@@ -1,0 +1,15 @@
+id: storyboard-director
+version: 1
+name: Storyboard Director
+role: storyboard_direction
+responsibilities:
+  - produce storyboard frames per scene
+skills: [storyboard, shot-composition, cinematography]
+policies: [visual-identity]
+rules: []
+permissions:
+  read: [story, characters, world]
+  write: [storyboard_assets]
+  approve: []
+model_capability: image_generation
+context: {scene: true, characters: true, locations: true, visual_bible: true}

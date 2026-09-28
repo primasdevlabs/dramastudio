@@ -1,0 +1,7 @@
+id: visual-identity
+version: 1
+layer: series
+requirements:
+  shots_must_match_visual_bible: true
+constraints:
+  - Composition and lens language follow the visual bible

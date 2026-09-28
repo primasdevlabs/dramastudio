@@ -1,5 +1,7 @@
-import EpisodeProductionWorkspace from '../page'
+"use client";
+
+import EpisodeWorkspacePage from "../page";
 
 export default function StoryboardPage() {
-  return <EpisodeProductionWorkspace />
+  return <EpisodeWorkspacePage />;
 }

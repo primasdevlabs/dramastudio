@@ -18,25 +18,32 @@ func NewPostgresProjectRepository(q postgres.Querier) *PostgresProjectRepository
 }
 
 func (r *PostgresProjectRepository) Save(ctx context.Context, p *domain.Project) error {
-	settings, err := json.Marshal(p.Settings)
+	raw, err := json.Marshal(p.Settings)
 	if err != nil {
 		return err
 	}
-	policy, err := json.Marshal(p.Policy)
+	var state map[string]interface{}
+	_ = json.Unmarshal(raw, &state)
+	if state == nil {
+		state = map[string]interface{}{}
+	}
+	state["policy"] = p.Policy
+	state["budget"] = p.Budget
+	settings, err := json.Marshal(state)
 	if err != nil {
 		return err
 	}
 	p.UpdatedAt = time.Now().UTC()
 	_, err = r.q.Exec(ctx, `
 		INSERT INTO projects.projects (id, org_id, name, description, genre, language, mode, status, settings, created_at, updated_at)
-		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9::jsonb || jsonb_build_object('policy',$10::jsonb,'budget',$11::jsonb),$12,$13)
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
 		ON CONFLICT (id) DO UPDATE SET
 			name = EXCLUDED.name, description = EXCLUDED.description,
 			genre = EXCLUDED.genre, language = EXCLUDED.language,
 			mode = EXCLUDED.mode, status = EXCLUDED.status,
 			settings = EXCLUDED.settings, updated_at = EXCLUDED.updated_at`,
 		p.ID, p.OrgID, p.Name, p.Description, p.Genre, p.Language, p.Mode, p.Status,
-		settings, policy, mustJSON(p.Budget), p.CreatedAt, p.UpdatedAt)
+		settings, p.CreatedAt, p.UpdatedAt)
 	return err
 }
 

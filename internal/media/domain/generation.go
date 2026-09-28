@@ -12,18 +12,22 @@ const (
 	GenerationCancelled GenerationJobStatus = "CANCELLED"
 )
 
+// GenerationJob tracks a provider-side generation attempt. Completion
+// arrives via verified webhook or polling (§61).
 type GenerationJob struct {
-	ID          string              `json:"id"`
-	ProjectID   string              `json:"project_id"`
-	Capability  string              `json:"capability"`
-	Provider    string              `json:"provider"`
-	Model       string              `json:"model"`
-	Input       string              `json:"input"`
-	OutputURL   string              `json:"output_url"`
-	Status      GenerationJobStatus `json:"status"`
-	Attempt     int                 `json:"attempt"`
-	Cost        float64             `json:"cost"`
-	StartedAt   time.Time           `json:"started_at"`
-	CompletedAt time.Time           `json:"completed_at"`
-	Error       string              `json:"error,omitempty"`
+	ID            string              `json:"id"`
+	ProjectID     string              `json:"project_id"`
+	AssetID       string              `json:"asset_id,omitempty"`
+	Capability    string              `json:"capability"`
+	Provider      string              `json:"provider"`
+	Model         string              `json:"model"`
+	ProviderJobID string              `json:"provider_job_id,omitempty"`
+	Input         string              `json:"input,omitempty"`
+	OutputURL     string              `json:"output_url,omitempty"`
+	Status        GenerationJobStatus `json:"status"`
+	Attempt       int                 `json:"attempt"`
+	Cost          float64             `json:"cost"`
+	StartedAt     time.Time           `json:"started_at"`
+	CompletedAt   *time.Time          `json:"completed_at,omitempty"`
+	Error         string              `json:"error,omitempty"`
 }

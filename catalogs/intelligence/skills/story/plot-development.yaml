@@ -1,0 +1,10 @@
+id: plot-development
+version: 1
+domain: story
+purpose: "Grow plot threads toward payoff."
+inputs: [story_graph, threads, canon]
+outputs: [thread_updates]
+method:
+  - advance open threads without resolving early
+  - plant setups for later payoff
+evaluation: [setup payoff ratio]

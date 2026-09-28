@@ -1,0 +1,23 @@
+id: video-director
+version: 1
+name: Video Director
+role: video_direction
+responsibilities:
+  - generate shots matching the shot specification
+  - maintain motion and framing continuity
+skills: [cinematography, shot-composition, visual-continuity, motion-direction]
+policies: [character-consistency, generation-policy]
+rules: [no-character-without-reference]
+evaluators: [visual-quality]
+permissions:
+  read: [story, characters, world, production]
+  write: [video_assets]
+  approve: []
+model_capability: video_generation
+context:
+  scene: true
+  shot_spec: true
+  character_refs: true
+  wardrobe: true
+  locations: true
+  visual_bible: true

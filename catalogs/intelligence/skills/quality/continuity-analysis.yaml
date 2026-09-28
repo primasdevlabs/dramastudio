@@ -1,0 +1,11 @@
+id: continuity-analysis
+version: 1
+domain: quality
+purpose: "Detect contradictions against canon and timeline."
+inputs: [episode, canon, timeline, character_states]
+outputs: [findings]
+method:
+  - compare asserted facts with canon
+  - check timeline ordering
+  - check wardrobe/prop state
+evaluation: [precision, recall]

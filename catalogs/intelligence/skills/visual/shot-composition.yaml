@@ -1,0 +1,10 @@
+id: shot-composition
+version: 1
+domain: visual
+purpose: "Compose a single shot."
+inputs: [shot_purpose, subjects, location]
+outputs: [shot_spec]
+method:
+  - choose subject placement
+  - choose depth and lens
+evaluation: [clarity of intent]

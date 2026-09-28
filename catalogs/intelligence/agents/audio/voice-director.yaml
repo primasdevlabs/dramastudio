@@ -1,0 +1,17 @@
+id: voice-director
+version: 1
+name: Voice Director
+role: voice_direction
+responsibilities:
+  - cast voices, direct dialogue performance, keep voice identity stable
+skills: [voice-direction, dialogue-performance]
+policies: [character-consistency]
+rules: []
+permissions:
+  read: [story, characters, production]
+  write: [audio_assets]
+  approve: []
+model_capability: voice
+context:
+  episode_outline: true
+  characters: true

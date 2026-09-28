@@ -1,1 +1,1 @@
-export const useAutomationMutation = () => ({ mutate: () => {} })
+export { usePauseProduction, useResumeProduction } from "@/features/production/mutations";

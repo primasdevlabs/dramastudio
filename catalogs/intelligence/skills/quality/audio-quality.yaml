@@ -1,0 +1,9 @@
+id: audio-quality
+version: 1
+domain: quality
+purpose: "Judge audio quality."
+inputs: [tracks, spec]
+outputs: [qa_report]
+method:
+  - loudness, clarity, sync
+evaluation: [pass rate]

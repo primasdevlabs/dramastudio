@@ -1,0 +1,9 @@
+id: canon-analysis
+version: 1
+domain: quality
+purpose: "Verify new facts do not contradict canon."
+inputs: [generated_facts, canon]
+outputs: [findings]
+method:
+  - check each new fact against active canon
+evaluation: [zero contradictions]

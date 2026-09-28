@@ -46,7 +46,7 @@ export default function ProjectDashboardPage({ params }: { params: { projectId: 
             </span>
           </div>
           <h1 className="text-2xl font-bold text-white tracking-tight">{project?.name || "Loading Project..."}</h1>
-          <p className="text-xs text-studio-muted mt-1">{project?.description || "Serialized AI Drama Production Workspace"}</p>
+          <p className="text-xs text-studio-muted mt-1">{project?.description || "Serialized Drama Production Studio"}</p>
         </div>
 
         <div className="flex items-center gap-3">
@@ -54,7 +54,7 @@ export default function ProjectDashboardPage({ params }: { params: { projectId: 
             href={`/projects/${projectId}/production`}
             className="inline-flex items-center gap-2 bg-studio-accent hover:bg-studio-accent-dark text-white font-medium text-xs px-4 py-2 rounded transition-colors"
           >
-            <Activity className="w-4 h-4" /> Production Tower
+            <Activity className="w-4 h-4" /> Production Console
           </Link>
         </div>
       </div>
@@ -130,7 +130,7 @@ export default function ProjectDashboardPage({ params }: { params: { projectId: 
           </div>
         ) : (
           <div className="text-xs text-studio-muted italic">
-            No Series Bible created yet. <Link href={`/projects/${projectId}/bible`} className="text-studio-accent underline">Initialize Series Bible</Link>
+            No Series Bible defined yet. <Link href={`/projects/${projectId}/bible`} className="text-studio-accent underline">Define Series Bible</Link>
           </div>
         )}
       </div>

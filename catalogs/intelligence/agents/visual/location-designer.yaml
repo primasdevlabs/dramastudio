@@ -1,0 +1,15 @@
+id: location-designer
+version: 1
+name: Location Designer
+role: location_design
+responsibilities:
+  - design canonical locations and variants
+skills: [location-design, visual-direction]
+policies: [visual-identity]
+rules: []
+permissions:
+  read: [story, world]
+  write: [location_assets]
+  approve: []
+model_capability: image_generation
+context: {series_bible: true, locations: true, visual_bible: true}

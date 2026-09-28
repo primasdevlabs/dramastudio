@@ -1,0 +1,11 @@
+id: no-character-without-reference
+version: 1
+name: Character video requires canonical reference
+when: {action: generate_character_video}
+requires:
+  - character.canonical_reference != null
+severity: BLOCKING
+enforcement: BLOCK
+on_failure:
+  action: block
+  message: Character reference is required.

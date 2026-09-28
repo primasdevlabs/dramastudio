@@ -1,0 +1,11 @@
+id: wardrobe-must-match-timeline
+version: 1
+name: Wardrobe must match story timeline position
+when: {action: generate_shot}
+requires:
+  - character.wardrobe_timeline_valid == true
+severity: ERROR
+enforcement: REQUIRE_REVIEW
+on_failure:
+  action: flag
+  message: Wardrobe does not match the story timeline.

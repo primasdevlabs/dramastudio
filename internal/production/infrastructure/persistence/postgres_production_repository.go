@@ -142,7 +142,7 @@ func scanJob(sc interface {
 const jobColumns = `id, production_id, project_id, run_id, episode_id, scene_id, shot_id, kind, status, attempt, result_url, error, idempotency_key, created_at, completed_at`
 
 func (r *PostgresProductionRepository) FindJobByID(ctx context.Context, id string) (*domain.ProductionJob, error) {
-	j, err := scanJob(r.q.QueryRow(ctx, `SELECT `+jobColumns+` FROM production.jobs WHERE id = $1`, id))
+	j, err := scanJob(r.q.QueryRow(ctx, `SELECT id, production_id, project_id, run_id, episode_id, scene_id, shot_id, kind, status, attempt, result_url, error, idempotency_key, created_at, completed_at FROM production.jobs WHERE id = $1`, id))
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, domain.ErrJobNotFound
 	}
@@ -150,7 +150,7 @@ func (r *PostgresProductionRepository) FindJobByID(ctx context.Context, id strin
 }
 
 func (r *PostgresProductionRepository) FindJobByIdempotencyKey(ctx context.Context, key string) (*domain.ProductionJob, error) {
-	j, err := scanJob(r.q.QueryRow(ctx, `SELECT `+jobColumns+` FROM production.jobs WHERE idempotency_key = $1`, key))
+	j, err := scanJob(r.q.QueryRow(ctx, `SELECT id, production_id, project_id, run_id, episode_id, scene_id, shot_id, kind, status, attempt, result_url, error, idempotency_key, created_at, completed_at FROM production.jobs WHERE idempotency_key = $1`, key))
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, domain.ErrJobNotFound
 	}
@@ -158,11 +158,11 @@ func (r *PostgresProductionRepository) FindJobByIdempotencyKey(ctx context.Conte
 }
 
 func (r *PostgresProductionRepository) ListJobsByProject(ctx context.Context, projectID string) ([]*domain.ProductionJob, error) {
-	return r.listJobs(ctx, `SELECT `+jobColumns+` FROM production.jobs WHERE project_id = $1 ORDER BY created_at`, projectID)
+	return r.listJobs(ctx, `SELECT id, production_id, project_id, run_id, episode_id, scene_id, shot_id, kind, status, attempt, result_url, error, idempotency_key, created_at, completed_at FROM production.jobs WHERE project_id = $1 ORDER BY created_at`, projectID)
 }
 
 func (r *PostgresProductionRepository) ListJobsByRun(ctx context.Context, runID string) ([]*domain.ProductionJob, error) {
-	return r.listJobs(ctx, `SELECT `+jobColumns+` FROM production.jobs WHERE run_id = $1 ORDER BY created_at`, runID)
+	return r.listJobs(ctx, `SELECT id, production_id, project_id, run_id, episode_id, scene_id, shot_id, kind, status, attempt, result_url, error, idempotency_key, created_at, completed_at FROM production.jobs WHERE run_id = $1 ORDER BY created_at`, runID)
 }
 
 func (r *PostgresProductionRepository) listJobs(ctx context.Context, sql, arg string) ([]*domain.ProductionJob, error) {
@@ -222,7 +222,7 @@ func scanShot(sc interface {
 const shotColumns = `id, project_id, episode_id, scene_id, seq, description, camera, characters, location_id, duration_sec, status, approved_asset`
 
 func (r *PostgresProductionRepository) FindShotByID(ctx context.Context, id string) (*domain.Shot, error) {
-	s, err := scanShot(r.q.QueryRow(ctx, `SELECT `+shotColumns+` FROM production.shots WHERE id = $1`, id))
+	s, err := scanShot(r.q.QueryRow(ctx, `SELECT id, project_id, episode_id, scene_id, seq, description, camera, characters, location_id, duration_sec, status, approved_asset FROM production.shots WHERE id = $1`, id))
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, domain.ErrShotNotFound
 	}
@@ -233,9 +233,9 @@ func (r *PostgresProductionRepository) ListShots(ctx context.Context, episodeID,
 	var rows pgx.Rows
 	var err error
 	if sceneID != "" {
-		rows, err = r.q.Query(ctx, `SELECT `+shotColumns+` FROM production.shots WHERE scene_id = $1 ORDER BY seq`, sceneID)
+		rows, err = r.q.Query(ctx, `SELECT id, project_id, episode_id, scene_id, seq, description, camera, characters, location_id, duration_sec, status, approved_asset FROM production.shots WHERE scene_id = $1 ORDER BY seq`, sceneID)
 	} else {
-		rows, err = r.q.Query(ctx, `SELECT `+shotColumns+` FROM production.shots WHERE episode_id = $1 ORDER BY scene_id, seq`, episodeID)
+		rows, err = r.q.Query(ctx, `SELECT id, project_id, episode_id, scene_id, seq, description, camera, characters, location_id, duration_sec, status, approved_asset FROM production.shots WHERE episode_id = $1 ORDER BY scene_id, seq`, episodeID)
 	}
 	if err != nil {
 		return nil, err
@@ -278,7 +278,7 @@ func scanApproval(sc interface {
 const approvalColumns = `id, project_id, episode_id, stage, target_id, decision, notes, decided_by, submitted_at, decided_at`
 
 func (r *PostgresProductionRepository) FindApprovalByID(ctx context.Context, id string) (*domain.ApprovalRequest, error) {
-	a, err := scanApproval(r.q.QueryRow(ctx, `SELECT `+approvalColumns+` FROM production.approvals WHERE id = $1`, id))
+	a, err := scanApproval(r.q.QueryRow(ctx, `SELECT id, project_id, episode_id, stage, target_id, decision, notes, decided_by, submitted_at, decided_at FROM production.approvals WHERE id = $1`, id))
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, domain.ErrApprovalNotFound
 	}
@@ -286,7 +286,7 @@ func (r *PostgresProductionRepository) FindApprovalByID(ctx context.Context, id 
 }
 
 func (r *PostgresProductionRepository) ListApprovalsByProject(ctx context.Context, projectID string, pendingOnly bool) ([]*domain.ApprovalRequest, error) {
-	sql := `SELECT ` + approvalColumns + ` FROM production.approvals WHERE project_id = $1`
+	sql := `SELECT id, project_id, episode_id, stage, target_id, decision, notes, decided_by, submitted_at, decided_at FROM production.approvals WHERE project_id = $1`
 	if pendingOnly {
 		sql += ` AND decided_at IS NULL`
 	}

@@ -1,0 +1,15 @@
+id: shot-designer
+version: 1
+name: Shot Designer
+role: shot_design
+responsibilities:
+  - convert scenes into concrete shot specifications
+skills: [shot-composition, cinematography, scene-breakdown]
+policies: [visual-identity]
+rules: [every-shot-requires-visual-spec]
+permissions:
+  read: [story, characters, world]
+  write: [shot_specifications]
+  approve: []
+model_capability: episode_planning
+context: {scene: true, characters: true, locations: true, visual_bible: true}

@@ -1,0 +1,15 @@
+id: image-director
+version: 1
+name: Image Director
+role: image_direction
+responsibilities:
+  - generate still assets to specification
+skills: [visual-direction, character-design]
+policies: [generation-policy, character-consistency]
+rules: [no-character-without-reference]
+permissions:
+  read: [characters, world, production]
+  write: [image_assets]
+  approve: []
+model_capability: image_generation
+context: {shot_spec: true, character_refs: true, visual_bible: true}

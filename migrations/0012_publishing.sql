@@ -17,6 +17,7 @@ CREATE TABLE IF NOT EXISTS publishing.publications (
     episode_id        TEXT NOT NULL,
     channel_id        TEXT NOT NULL REFERENCES publishing.channels(id),
     metadata          JSONB NOT NULL DEFAULT '{}', -- title|description|captions|thumbnail
+    video_url         TEXT NOT NULL DEFAULT '',
     scheduled_at      TIMESTAMPTZ,
     status            TEXT NOT NULL DEFAULT 'draft', -- draft|scheduled|publishing|published|failed
     platform_response JSONB NOT NULL DEFAULT '{}',

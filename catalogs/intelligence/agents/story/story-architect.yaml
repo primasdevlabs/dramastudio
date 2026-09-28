@@ -1,0 +1,18 @@
+id: story-architect
+version: 1
+name: Story Architect
+role: story_architecture
+responsibilities:
+  - design series structure, arcs, and the story graph
+skills: [story-architecture, plot-development, foreshadowing]
+policies: [canon-policy]
+rules: []
+permissions:
+  read: [story, canon, characters, world]
+  write: [story_graph, arcs]
+  approve: []
+model_capability: story_architecture
+context:
+  series_bible: true
+  canon: true
+  story_graph: true

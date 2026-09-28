@@ -1,0 +1,9 @@
+id: assembly
+version: 1
+domain: postproduction
+purpose: "Assemble the episode timeline."
+inputs: [edl, assets]
+outputs: [timeline]
+method:
+  - order per EDL, apply transitions
+evaluation: [technical correctness]

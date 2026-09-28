@@ -9,11 +9,13 @@ import (
 )
 
 // Store backends supported by the runtime. "postgres" is the production
-// default; "memory" exists for local development and tests only.
+// database; "sqlite" is the local-development/test adapter (same repository
+// code, translated dialect); "memory" is for tests only.
 type StoreBackend string
 
 const (
 	StorePostgres StoreBackend = "postgres"
+	StoreSQLite   StoreBackend = "sqlite"
 	StoreMemory   StoreBackend = "memory"
 )
 
@@ -24,32 +26,43 @@ const (
 	StorageLocal StorageBackend = "local"
 )
 
+// WorkflowEngine selects the durable-execution adapter (§83). "temporal"
+// requires a Temporal server; "local" runs the production pipeline
+// in-process for fully-local development.
+type WorkflowEngine string
+
+const (
+	EngineTemporal WorkflowEngine = "temporal"
+	EngineLocal    WorkflowEngine = "local"
+)
+
 type Config struct {
 	Environment   string
 	Server        ServerConfig
 	Store         StoreBackend
 	Database      DatabaseConfig
 	Redis         RedisConfig
-	Temporal      TemporalConfig
+	Workflow      WorkflowConfig
 	Storage       StorageConfig
 	Security      SecurityConfig
 	Observability ObservabilityConfig
 }
 
 type ServerConfig struct {
-	Port             int
-	ReadTimeout      time.Duration
-	WriteTimeout     time.Duration
-	IdleTimeout      time.Duration
-	ShutdownTimeout  time.Duration
-	AllowedOrigins   []string
-	PublicURL        string
+	Port            int
+	ReadTimeout     time.Duration
+	WriteTimeout    time.Duration
+	IdleTimeout     time.Duration
+	ShutdownTimeout time.Duration
+	AllowedOrigins  []string
+	PublicURL       string
 }
 
 type DatabaseConfig struct {
-	URL          string
-	MaxConns     int32
-	MinConns     int32
+	URL           string // postgres DSN (DATABASE_URL)
+	Path          string // sqlite file path (DATABASE_PATH)
+	MaxConns      int32
+	MinConns      int32
 	MigrationsDir string
 }
 
@@ -59,7 +72,10 @@ type RedisConfig struct {
 	DB       int
 }
 
-type TemporalConfig struct {
+// WorkflowConfig picks the engine adapter plus engine-specific transport.
+// Temporal fields apply only when Engine is "temporal".
+type WorkflowConfig struct {
+	Engine    WorkflowEngine
 	HostPort  string
 	Namespace string
 	APIKey    string
@@ -106,9 +122,10 @@ func Load() (*Config, error) {
 			AllowedOrigins:  envList("ALLOWED_ORIGINS"),
 			PublicURL:       os.Getenv("PUBLIC_URL"),
 		},
-		Store: StoreBackend(envStr("DRAMASTUDIO_STORE", string(StorePostgres))),
+		Store: StoreBackend(envStr("DRAMASTUDIO_STORE", defaultStore())),
 		Database: DatabaseConfig{
 			URL:           os.Getenv("DATABASE_URL"),
+			Path:          envStr("DATABASE_PATH", "data/dramastudio.db"),
 			MaxConns:      int32(envInt("DATABASE_MAX_CONNS", 10)),
 			MinConns:      int32(envInt("DATABASE_MIN_CONNS", 1)),
 			MigrationsDir: envStr("MIGRATIONS_DIR", "migrations"),
@@ -118,7 +135,8 @@ func Load() (*Config, error) {
 			Password: os.Getenv("REDIS_PASSWORD"),
 			DB:       envInt("REDIS_DB", 0),
 		},
-		Temporal: TemporalConfig{
+		Workflow: WorkflowConfig{
+			Engine:    WorkflowEngine(envStr("WORKFLOW_ENGINE", defaultEngine())),
 			HostPort:  envStr("TEMPORAL_HOST_PORT", "localhost:7233"),
 			Namespace: envStr("TEMPORAL_NAMESPACE", "default"),
 			APIKey:    os.Getenv("TEMPORAL_API_KEY"),
@@ -159,14 +177,27 @@ func (c *Config) Validate() error {
 		if c.Database.URL == "" {
 			missing = append(missing, "DATABASE_URL")
 		}
+	case StoreSQLite:
+		// local/test profile — DATABASE_PATH defaults to data/dramastudio.db
 	case StoreMemory:
 		// in-memory store needs no database
 	default:
-		return fmt.Errorf("invalid DRAMASTUDIO_STORE %q (want postgres|memory)", c.Store)
+		return fmt.Errorf("invalid DRAMASTUDIO_STORE %q (want postgres|sqlite|memory)", c.Store)
 	}
 
 	if c.Security.RequireAuth && c.Security.JWTSecret == "" {
 		missing = append(missing, "JWT_SECRET")
+	}
+
+	switch c.Workflow.Engine {
+	case EngineTemporal:
+		if c.Workflow.HostPort == "" {
+			missing = append(missing, "TEMPORAL_HOST_PORT")
+		}
+	case EngineLocal:
+		// in-process pipeline needs no server
+	default:
+		return fmt.Errorf("invalid WORKFLOW_ENGINE %q (want temporal|local)", c.Workflow.Engine)
 	}
 
 	switch c.Storage.Backend {
@@ -192,6 +223,28 @@ func (c *Config) Validate() error {
 		return fmt.Errorf("missing required configuration: %s", strings.Join(missing, ", "))
 	}
 	return nil
+}
+
+// defaultEngine picks the workflow engine that matches the deployment:
+// development defaults to the in-process engine so a contributor needs
+// only Go + a database file; production defaults to Temporal.
+func defaultEngine() string {
+	if envStr("DRAMASTUDIO_ENV", "development") == "development" {
+		return string(EngineLocal)
+	}
+	return string(EngineTemporal)
+}
+
+// defaultStore picks the persistence driver per deployment profile:
+// development/test default to SQLite (self-contained, no server);
+// production defaults to PostgreSQL.
+func defaultStore() string {
+	switch envStr("DRAMASTUDIO_ENV", "development") {
+	case "production", "staging":
+		return string(StorePostgres)
+	default:
+		return string(StoreSQLite)
+	}
 }
 
 func envStr(key, def string) string {

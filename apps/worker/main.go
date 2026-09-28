@@ -2,45 +2,65 @@ package main
 
 import (
 	"context"
-	"log"
+	"log/slog"
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
-	"dramastudio/internal/platform/workflow"
-	"dramastudio/internal/platform/workflow/activities"
+	"dramastudio/configs"
+	"dramastudio/internal/appwiring"
+	"dramastudio/internal/platform/workflow/temporal"
 )
 
 func main() {
-	log.Println("Starting DramaStudio Background Worker...")
-	log.Println("Initializing task queues: story-tasks, visual-tasks, video-tasks, audio-tasks, media-tasks, qa-tasks, publishing-tasks...")
+	cfg, err := configs.Load()
+	if err != nil {
+		slog.Error("config", "err", err)
+		os.Exit(1)
+	}
 
-	act := activities.NewEpisodeActivities()
-	wf := workflow.NewProduceEpisodeWorkflow(act)
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	// With the in-process engine the pipeline runs inside the API process;
+	// this binary only exists to host activity workers for a durable engine.
+	if cfg.Workflow.Engine != configs.EngineTemporal {
+		slog.Info("workflow engine does not need workers", "engine", cfg.Workflow.Engine)
+		return
+	}
 
-	// Simulate Worker Loop listening for production jobs
-	go func() {
-		ticker := time.NewTicker(10 * time.Second)
-		defer ticker.Stop()
-		for {
-			select {
-			case <-ctx.Done():
-				return
-			case <-ticker.C:
-				log.Println("[Worker] Listening on Temporal task queues: video-tasks, story-tasks... (Idle)")
+	container, err := appwiring.Build(ctx, cfg)
+	if err != nil {
+		slog.Error("wiring", "err", err)
+		os.Exit(1)
+	}
+	defer container.Close()
+
+	tc, err := temporal.Dial(ctx, temporal.Config{
+		HostPort:  cfg.Workflow.HostPort,
+		Namespace: cfg.Workflow.Namespace,
+		APIKey:    cfg.Workflow.APIKey,
+		UseTLS:    cfg.Workflow.UseTLS,
+	})
+	if err != nil {
+		slog.Error("temporal dial", "err", err)
+		os.Exit(1)
+	}
+	defer tc.Close()
+
+	workers := temporal.NewBuilder(tc, container.Activities).BuildAll()
+	for _, w := range workers {
+		go func() {
+			if err := w.Run(nil); err != nil {
+				slog.Error("worker", "err", err)
 			}
-		}
-	}()
+		}()
+	}
+	slog.Info("temporal workers running", "queues", len(workers))
 
-	_ = wf
-
-	stop := make(chan os.Signal, 1)
-	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
-	<-stop
-
-	log.Println("Shutting down DramaStudio Worker gracefully...")
+	<-ctx.Done()
+	for _, w := range workers {
+		w.Stop()
+	}
+	slog.Info("worker stopped")
 }

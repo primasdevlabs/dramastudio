@@ -1,0 +1,9 @@
+id: editing
+version: 1
+domain: postproduction
+purpose: "Cut shots into a scene sequence."
+inputs: [shots, pacing_target]
+outputs: [edit_decision_list]
+method:
+  - cut on action, hold on emotion
+evaluation: [rhythm, clarity]

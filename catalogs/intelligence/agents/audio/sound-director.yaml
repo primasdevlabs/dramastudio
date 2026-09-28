@@ -1,0 +1,15 @@
+id: sound-director
+version: 1
+name: Sound Director
+role: sound_direction
+responsibilities:
+  - design SFX and mix balance
+skills: [sound-design]
+policies: [generation-policy]
+rules: []
+permissions:
+  read: [production]
+  write: [audio_assets]
+  approve: []
+model_capability: sfx_generation
+context: {scene: true, shot_spec: true}

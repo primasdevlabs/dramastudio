@@ -47,8 +47,8 @@ func (m *MemoryCollector) Counter(name string) float64 {
 // Noop drops all samples.
 type Noop struct{}
 
-func (Noop) IncCounter(string, float64)          {}
-func (Noop) RecordDuration(string, float64)      {}
+func (Noop) IncCounter(string, float64)     {}
+func (Noop) RecordDuration(string, float64) {}
 
 // Ensure interface conformance.
 var _ = context.Background

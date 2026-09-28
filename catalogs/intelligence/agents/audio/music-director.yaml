@@ -1,0 +1,15 @@
+id: music-director
+version: 1
+name: Music Director
+role: music_direction
+responsibilities:
+  - score episodes within the sonic identity
+skills: [music-direction]
+policies: [generation-policy]
+rules: []
+permissions:
+  read: [story, production]
+  write: [audio_assets]
+  approve: []
+model_capability: music
+context: {episode_outline: true}

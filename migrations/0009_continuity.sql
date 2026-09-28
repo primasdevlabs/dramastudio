@@ -17,12 +17,14 @@ CREATE TABLE IF NOT EXISTS continuity.issues (
     check_id       TEXT NOT NULL DEFAULT '',
     project_id     TEXT NOT NULL,
     episode_id     TEXT NOT NULL DEFAULT '',
+    scene_id       TEXT NOT NULL DEFAULT '',
     category       TEXT NOT NULL,     -- wardrobe|knowledge|timeline|...
     severity       TEXT NOT NULL,     -- INFO|WARNING|ERROR|BLOCKING
     entity         TEXT NOT NULL DEFAULT '',
     evidence       TEXT NOT NULL DEFAULT '',
     expected_state TEXT NOT NULL DEFAULT '',
     actual_state   TEXT NOT NULL DEFAULT '',
+    cause          TEXT NOT NULL DEFAULT '',
     resolution     TEXT NOT NULL DEFAULT '',
     status         TEXT NOT NULL DEFAULT 'open', -- open|resolved|wontfix
     created_at     TIMESTAMPTZ NOT NULL DEFAULT now(),

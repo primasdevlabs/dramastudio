@@ -1,0 +1,10 @@
+id: storyboard
+version: 1
+domain: visual
+purpose: "Translate scenes into key frames."
+inputs: [scene, shot_spec]
+outputs: [storyboard_frames]
+method:
+  - one frame per beat change
+  - preserve screen direction
+evaluation: [readability]

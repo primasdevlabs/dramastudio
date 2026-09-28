@@ -1,0 +1,10 @@
+id: character-continuity
+version: 1
+domain: quality
+purpose: "Keep character appearance aligned with canonical references."
+inputs: [character_refs, generated_frames]
+outputs: [findings]
+method:
+  - compare generated output to canonical reference
+  - flag drift in face, silhouette, palette
+evaluation: [identity_preservation]

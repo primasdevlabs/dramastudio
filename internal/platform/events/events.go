@@ -12,7 +12,7 @@ type BaseEvent struct {
 	Timestamp time.Time `json:"timestamp"`
 }
 
-func (e BaseEvent) EventType() string    { return e.Type }
+func (e BaseEvent) EventType() string     { return e.Type }
 func (e BaseEvent) OccurredAt() time.Time { return e.Timestamp }
 
 type SeriesCreated struct{ BaseEvent }

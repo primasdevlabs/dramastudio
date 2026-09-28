@@ -1,0 +1,7 @@
+id: publication-policy
+version: 1
+layer: system
+requirements:
+  requires_qa_pass: true
+  requires_human_approval: true
+protected: [requires_human_approval]

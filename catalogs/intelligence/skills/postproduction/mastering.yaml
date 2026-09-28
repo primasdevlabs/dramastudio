@@ -1,0 +1,9 @@
+id: mastering
+version: 1
+domain: postproduction
+purpose: "Final loudness/color master."
+inputs: [timeline, delivery_spec]
+outputs: [master]
+method:
+  - normalize loudness per channel spec
+evaluation: [spec compliance]

@@ -43,7 +43,7 @@ export default function PostproductionPage({ params }: { params: { projectId: st
           className="inline-flex items-center gap-2 bg-studio-accent hover:bg-studio-accent-dark text-white font-medium text-xs px-4 py-2.5 rounded transition-colors"
         >
           <Cpu className="w-4 h-4" />
-          {renderMutation.isPending ? "Rendering via FFmpeg..." : "Render Episode (FFmpeg 9:16)"}
+          {renderMutation.isPending ? "Rendering master..." : "Render Master (FFmpeg 9:16)"}
         </button>
       </div>
 
@@ -51,7 +51,7 @@ export default function PostproductionPage({ params }: { params: { projectId: st
         <div className="bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 p-4 rounded text-xs flex items-center justify-between font-mono">
           <div className="flex items-center gap-2">
             <CheckCircle2 className="w-4 h-4" />
-            <span>FFmpeg Render Task Completed! Output URL: <strong>{renderResult.output_url}</strong></span>
+            <span>Master Render Completed! Output URL: <strong>{renderResult.output_url}</strong></span>
           </div>
           <span className="bg-emerald-500/20 px-2 py-0.5 rounded text-emerald-300 font-medium">{renderResult.resolution}</span>
         </div>

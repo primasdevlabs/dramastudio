@@ -1,0 +1,9 @@
+id: approval-policy
+version: 1
+layer: system
+requirements:
+  generated_assets_require_review: true
+  publish_requires_approval: true
+protected: [publish_requires_approval]
+constraints:
+  - Generation success is not approval

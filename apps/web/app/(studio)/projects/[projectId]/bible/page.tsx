@@ -77,7 +77,7 @@ export default function SeriesBiblePage({ params }: { params: { projectId: strin
                 )}
               </Group>
               <Text size="xs" c="dimmed">
-                Canonical creative foundation for AI generation
+                Canonical creative foundation for script and visual production
               </Text>
             </div>
           </Group>
@@ -107,7 +107,7 @@ export default function SeriesBiblePage({ params }: { params: { projectId: strin
         <Stack gap="lg">
           <Textarea
             label="Core Story Premise"
-            description="Central logline and premise for AI episode planning"
+            description="Central logline and premise for episode planning"
             rows={4}
             value={premise}
             onChange={(e) => setPremise(e.currentTarget.value)}

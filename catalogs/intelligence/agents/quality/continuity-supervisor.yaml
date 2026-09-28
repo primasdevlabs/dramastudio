@@ -1,0 +1,25 @@
+id: continuity-supervisor
+version: 1
+name: Continuity Supervisor
+role: continuity_supervision
+responsibilities:
+  - detect canon, timeline, wardrobe and visual contradictions
+  - block production on continuity-breaking assets
+skills: [continuity-analysis, visual-continuity, canon-analysis]
+policies: [continuity-policy, character-consistency]
+rules: [wardrobe-must-match-timeline, episode-continuity-required]
+evaluators: [continuity-analysis]
+permissions:
+  read: [story, canon, characters, world, production, continuity]
+  write: [continuity_issues]
+  approve: []
+model_capability: continuity
+context:
+  episode_outline: true
+  canon: true
+  timeline: true
+  characters: true
+  wardrobe: true
+  previous_episodes: true
+  story_graph: true
+  assets: true

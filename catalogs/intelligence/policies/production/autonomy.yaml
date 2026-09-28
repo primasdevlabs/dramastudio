@@ -1,0 +1,9 @@
+id: autonomy-policy
+version: 1
+layer: system
+requirements:
+  default_mode: monitored
+  autonomous_requires_human_setup: true
+protected: [autonomous_requires_human_setup]
+constraints:
+  - Escalate irreversible decisions to a human

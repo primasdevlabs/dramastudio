@@ -33,7 +33,8 @@ export const studioTheme = createTheme({
     dark: studioDark,
     terracotta: terracottaAccent,
   },
-  fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+  fontFamily: "var(--font-inter), system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+  fontFamilyMonospace: "var(--font-inter), system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
   defaultRadius: 'sm',
   components: {
     Button: {

@@ -1,0 +1,11 @@
+id: episode-continuity-required
+version: 1
+name: No blocking continuity issues before render
+when: {action: render_episode}
+requires:
+  - continuity.blocking_issues == 0
+severity: BLOCKING
+enforcement: BLOCK
+on_failure:
+  action: block
+  message: Blocking continuity issues must be resolved before render.

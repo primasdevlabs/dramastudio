@@ -1,0 +1,25 @@
+id: episode-writer
+version: 1
+name: Episode Writer
+role: episode_writing
+responsibilities:
+  - write episode screenplays within the season arc
+  - resolve assigned plot threads
+  - honor canon and continuity
+skills: [story-architecture, scene-writing, dialogue-writing, character-development, pacing]
+policies: [canon-policy, continuity-policy]
+rules: [episode-continuity-required]
+evaluators: [script-quality]
+permissions:
+  read: [story, canon, characters, world, continuity]
+  write: [scripts, episode_outlines]
+  approve: []
+model_capability: script_writing
+context:
+  series_bible: true
+  season_arc: true
+  episode_outline: true
+  characters: true
+  canon: true
+  plot_threads: true
+  previous_episodes: true

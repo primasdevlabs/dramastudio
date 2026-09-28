@@ -1,0 +1,25 @@
+id: visual-director
+version: 1
+name: Visual Director
+role: visual_direction
+responsibilities:
+  - establish visual language
+  - maintain visual consistency
+  - approve shot specifications
+skills: [visual-direction, shot-composition, character-continuity, cinematography]
+policies: [character-consistency, visual-identity, generation-policy]
+rules: [no-character-without-reference, every-shot-requires-visual-spec]
+permissions:
+  read: [story, canon, characters, world]
+  write: [shot_specifications, visual_assets]
+  approve: [visual_assets]
+model_capability: vision
+evaluators: [visual-quality]
+context:
+  scene: true
+  shot_spec: true
+  character_refs: true
+  wardrobe: true
+  locations: true
+  props: true
+  visual_bible: true

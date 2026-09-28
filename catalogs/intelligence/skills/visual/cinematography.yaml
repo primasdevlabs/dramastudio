@@ -1,0 +1,15 @@
+id: cinematography
+version: 1
+domain: visual
+purpose: "Define cinematic shot language for a scene."
+inputs: [scene, characters, location, emotional_state, story_intent, visual_bible]
+outputs: [shot_specification]
+method:
+  - identify dramatic purpose
+  - determine framing
+  - determine camera position
+  - determine camera movement
+  - determine lens characteristics
+  - determine duration
+  - validate against visual bible
+evaluation: [supports_story_intent, visually_consistent, physically_plausible, production_feasible]

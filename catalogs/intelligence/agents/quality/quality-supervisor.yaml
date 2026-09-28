@@ -1,0 +1,20 @@
+id: quality-supervisor
+version: 1
+name: Quality Supervisor
+role: quality_supervision
+responsibilities:
+  - gate episodes on quality before assembly and publish
+skills: [visual-quality, script-quality, audio-quality, production-validation]
+policies: [approval-policy]
+rules: [episode-continuity-required]
+evaluators: [script-quality, visual-quality]
+permissions:
+  read: [story, production, continuity, media]
+  write: [qa_reports]
+  approve: [episode_release]
+model_capability: quality_evaluation
+context:
+  episode_outline: true
+  canon: true
+  timeline: true
+  assets: true

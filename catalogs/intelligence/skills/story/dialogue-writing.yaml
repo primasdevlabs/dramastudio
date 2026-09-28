@@ -1,0 +1,10 @@
+id: dialogue-writing
+version: 1
+domain: story
+purpose: "Write dialogue true to each voice."
+inputs: [characters, scene, tone]
+outputs: [dialogue]
+method:
+  - differentiate voices
+  - subtext over exposition
+evaluation: [voice distinctness, subtext]

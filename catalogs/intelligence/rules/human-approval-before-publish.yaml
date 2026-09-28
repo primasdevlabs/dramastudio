@@ -1,0 +1,11 @@
+id: human-approval-before-publish
+version: 1
+name: Human approval required before publish
+when: {action: publish_episode}
+requires:
+  - approval.human_approved == true
+severity: BLOCKING
+enforcement: BLOCK
+on_failure:
+  action: block
+  message: Publishing requires a human approval decision.

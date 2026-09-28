@@ -1,0 +1,15 @@
+id: publishing-director
+version: 1
+name: Publishing Director
+role: publishing_direction
+responsibilities:
+  - package and publish approved episodes per channel policy
+skills: [captions, mastering]
+policies: [publication-policy, approval-policy]
+rules: [human-approval-before-publish]
+permissions:
+  read: [production, media, publishing]
+  write: [publications]
+  approve: []
+model_capability: publishing_metadata
+context: {episode_outline: true, assets: true}

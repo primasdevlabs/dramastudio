@@ -1,0 +1,9 @@
+id: sound-design
+version: 1
+domain: audio
+purpose: "Design SFX beds."
+inputs: [scene, actions]
+outputs: [sfx_plan]
+method:
+  - diegetic first, restraint on score
+evaluation: [immersion]

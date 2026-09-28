@@ -1,0 +1,10 @@
+id: season-planning
+version: 1
+domain: story
+purpose: "Decompose a season arc into episode beats."
+inputs: [season_arc, characters, canon]
+outputs: [episode_outlines]
+method:
+  - allocate arc phases across episodes
+  - assign thread advancements per episode
+evaluation: [arc coverage, thread balance]

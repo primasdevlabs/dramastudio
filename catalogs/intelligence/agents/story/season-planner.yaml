@@ -1,0 +1,15 @@
+id: season-planner
+version: 1
+name: Season Planner
+role: season_planning
+responsibilities:
+  - decompose season arc into episode outlines
+skills: [story-architecture, plot-development]
+policies: [canon-policy]
+rules: []
+permissions:
+  read: [story, canon, production]
+  write: [episode_outlines]
+  approve: []
+model_capability: season_planning
+context: {series_bible: true, season_arc: true, story_graph: true}

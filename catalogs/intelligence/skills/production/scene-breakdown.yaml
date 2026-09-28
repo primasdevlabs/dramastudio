@@ -1,0 +1,9 @@
+id: scene-breakdown
+version: 1
+domain: production
+purpose: "Break a scene into production units."
+inputs: [scene_script, locations, characters]
+outputs: [breakdown]
+method:
+  - list shots, props, wardrobe, cast
+evaluation: [completeness]

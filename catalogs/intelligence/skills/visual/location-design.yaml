@@ -1,0 +1,9 @@
+id: location-design
+version: 1
+domain: visual
+purpose: "Design canonical locations."
+inputs: [world, visual_bible]
+outputs: [location_reference]
+method:
+  - define layout and lighting signature
+evaluation: [spatial consistency]
