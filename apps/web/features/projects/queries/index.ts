@@ -11,8 +11,8 @@ export function useProjects() {
   return useQuery({
     queryKey: projectKeys.all,
     queryFn: async () => {
-      const res = await api.get<{ projects: Project[] }>("/v1/projects");
-      return res.projects ?? [];
+      const res = await api.get<{ items: Project[] }>("/v1/projects");
+      return res.items ?? [];
     },
   });
 }

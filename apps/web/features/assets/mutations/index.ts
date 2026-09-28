@@ -11,7 +11,11 @@ export function useApproveAsset() {
     }: {
       projectId: string;
       assetId: string;
-    }) => api.post(`/v1/media/assets/${assetId}/approve`, {}),
+    }) =>
+      api.post(
+        `/v1/projects/${projectId}/media/assets/${assetId}/approve`,
+        {}
+      ),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({
         queryKey: assetKeys.all(variables.projectId),

@@ -2,7 +2,10 @@ package persistence
 
 import (
 	"context"
+	"encoding/json"
+	"sort"
 	"sync"
+	"time"
 
 	"dramastudio/internal/canon/domain"
 )
@@ -12,7 +15,7 @@ type InMemoryCanonRepository struct {
 	facts     map[string]*domain.StoryFact
 	knowledge map[string]*domain.KnowledgeState
 	rules     map[string]*domain.CanonRule
-	versions  map[string]map[int][]byte
+	versions  map[string]map[int]*domain.FactVersion
 }
 
 func NewInMemoryCanonRepository() *InMemoryCanonRepository {
@@ -20,7 +23,7 @@ func NewInMemoryCanonRepository() *InMemoryCanonRepository {
 		facts:     make(map[string]*domain.StoryFact),
 		knowledge: make(map[string]*domain.KnowledgeState),
 		rules:     make(map[string]*domain.CanonRule),
-		versions:  make(map[string]map[int][]byte),
+		versions:  make(map[string]map[int]*domain.FactVersion),
 	}
 }
 
@@ -68,10 +71,31 @@ func (r *InMemoryCanonRepository) SaveFactVersion(_ context.Context, factID stri
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	if r.versions[factID] == nil {
-		r.versions[factID] = make(map[int][]byte)
+		r.versions[factID] = make(map[int]*domain.FactVersion)
 	}
-	r.versions[factID][version] = value
+	r.versions[factID][version] = &domain.FactVersion{
+		FactID:    factID,
+		Version:   version,
+		Value:     append(json.RawMessage(nil), value...),
+		UpdatedAt: time.Now().UTC(),
+	}
 	return nil
+}
+
+func (r *InMemoryCanonRepository) ListFactVersions(_ context.Context, factID string) ([]*domain.FactVersion, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	vers := r.versions[factID]
+	out := make([]*domain.FactVersion, 0, len(vers))
+	nums := make([]int, 0, len(vers))
+	for n := range vers {
+		nums = append(nums, n)
+	}
+	sort.Ints(nums)
+	for _, n := range nums {
+		out = append(out, vers[n])
+	}
+	return out, nil
 }
 
 func knowledgeKey(characterID, episodeID string) string {

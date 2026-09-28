@@ -1,6 +1,7 @@
 package http
 
 import (
+	"context"
 	"net/http"
 	"strconv"
 
@@ -10,11 +11,43 @@ import (
 )
 
 type PostproductionHandler struct {
-	service *services.PostproductionService
+	service         *services.PostproductionService
+	episodeResolver func(ctx context.Context, episodeID string) (string, error)
 }
 
 func NewPostproductionHandler(service *services.PostproductionService) *PostproductionHandler {
 	return &PostproductionHandler{service: service}
+}
+
+// SetEpisodeResolver injects the episode → project ownership check. When
+// unset, episode-scoped params are not verified (tests only).
+func (h *PostproductionHandler) SetEpisodeResolver(fn func(ctx context.Context, episodeID string) (string, error)) {
+	h.episodeResolver = fn
+}
+
+// verifyEpisode confirms the episode_id query/body param belongs to the
+// path project. Nested-resource IDs must resolve inside the route's
+// hierarchy, not just exist.
+func (h *PostproductionHandler) verifyEpisode(w http.ResponseWriter, r *http.Request, episodeID string) bool {
+	if h.episodeResolver == nil || episodeID == "" {
+		return true
+	}
+	owner, err := h.episodeResolver(r.Context(), episodeID)
+	if err != nil || owner != r.PathValue("projectId") {
+		platformhttp.WriteError(w, http.StatusNotFound, "EPISODE_NOT_FOUND", "Episode not found in project", platformhttp.RequestIDFrom(r), nil)
+		return false
+	}
+	return true
+}
+
+// verifyRender confirms {renderId} belongs to the path project.
+func (h *PostproductionHandler) verifyRender(w http.ResponseWriter, r *http.Request) bool {
+	task, err := h.service.GetRender(r.Context(), r.PathValue("renderId"))
+	if err != nil || task.ProjectID != r.PathValue("projectId") {
+		platformhttp.WriteError(w, http.StatusNotFound, "RENDER_NOT_FOUND", "Render not found", platformhttp.RequestIDFrom(r), nil)
+		return false
+	}
+	return true
 }
 
 func (h *PostproductionHandler) RegisterRoutes(mux *http.ServeMux) {
@@ -65,6 +98,9 @@ func (r *queueRenderReq) Validate() error {
 
 func (h *PostproductionHandler) getTimeline(w http.ResponseWriter, r *http.Request) {
 	episodeID := r.URL.Query().Get("episode_id")
+	if !h.verifyEpisode(w, r, episodeID) {
+		return
+	}
 	if v := r.URL.Query().Get("version"); v != "" {
 		// specific version lookup via versions list
 		version, _ := strconv.Atoi(v)
@@ -95,6 +131,9 @@ func (h *PostproductionHandler) saveTimeline(w http.ResponseWriter, r *http.Requ
 	if !platformhttp.DecodeAndValidate(w, r, &req) {
 		return
 	}
+	if !h.verifyEpisode(w, r, req.EpisodeID) {
+		return
+	}
 	tl, err := h.service.SaveTimeline(r.Context(), r.PathValue("projectId"), req.EpisodeID,
 		req.VideoTracks, req.AudioTracks, req.Subtitles)
 	if err != nil {
@@ -105,6 +144,9 @@ func (h *PostproductionHandler) saveTimeline(w http.ResponseWriter, r *http.Requ
 }
 
 func (h *PostproductionHandler) listTimelineVersions(w http.ResponseWriter, r *http.Request) {
+	if !h.verifyEpisode(w, r, r.URL.Query().Get("episode_id")) {
+		return
+	}
 	versions, err := h.service.ListTimelineVersions(r.Context(), r.URL.Query().Get("episode_id"))
 	if err != nil {
 		platformhttp.WriteErrorFrom(w, r, err)
@@ -114,6 +156,9 @@ func (h *PostproductionHandler) listTimelineVersions(w http.ResponseWriter, r *h
 }
 
 func (h *PostproductionHandler) approveTimeline(w http.ResponseWriter, r *http.Request) {
+	if !h.verifyEpisode(w, r, r.URL.Query().Get("episode_id")) {
+		return
+	}
 	tl, err := h.service.ApproveTimeline(r.Context(), r.URL.Query().Get("episode_id"))
 	if err != nil {
 		platformhttp.WriteError(w, http.StatusNotFound, "TIMELINE_NOT_FOUND", "Timeline not found", platformhttp.RequestIDFrom(r), nil)
@@ -123,17 +168,32 @@ func (h *PostproductionHandler) approveTimeline(w http.ResponseWriter, r *http.R
 }
 
 func (h *PostproductionHandler) listRenders(w http.ResponseWriter, r *http.Request) {
-	renders, err := h.service.ListRenders(r.Context(), r.URL.Query().Get("episode_id"))
+	episodeID := r.URL.Query().Get("episode_id")
+	if !h.verifyEpisode(w, r, episodeID) {
+		return
+	}
+	renders, err := h.service.ListRenders(r.Context(), episodeID)
 	if err != nil {
 		platformhttp.WriteErrorFrom(w, r, err)
 		return
 	}
-	platformhttp.WriteJSON(w, http.StatusOK, map[string]interface{}{"items": renders})
+	// Defense in depth: rows were created under this path's project, but
+	// never let a render carrying a foreign project_id leak back out.
+	out := renders[:0]
+	for _, t := range renders {
+		if t.ProjectID == r.PathValue("projectId") {
+			out = append(out, t)
+		}
+	}
+	platformhttp.WriteJSON(w, http.StatusOK, map[string]interface{}{"items": out})
 }
 
 func (h *PostproductionHandler) queueRender(w http.ResponseWriter, r *http.Request) {
 	var req queueRenderReq
 	if !platformhttp.DecodeAndValidate(w, r, &req) {
+		return
+	}
+	if !h.verifyEpisode(w, r, req.EpisodeID) {
 		return
 	}
 	task, err := h.service.QueueRender(r.Context(), r.PathValue("projectId"), req.EpisodeID, req.Format, req.Resolution)
@@ -153,7 +213,7 @@ func (h *PostproductionHandler) queueRender(w http.ResponseWriter, r *http.Reque
 
 func (h *PostproductionHandler) getRender(w http.ResponseWriter, r *http.Request) {
 	task, err := h.service.GetRender(r.Context(), r.PathValue("renderId"))
-	if err != nil {
+	if err != nil || task.ProjectID != r.PathValue("projectId") {
 		platformhttp.WriteError(w, http.StatusNotFound, "RENDER_NOT_FOUND", "Render not found", platformhttp.RequestIDFrom(r), nil)
 		return
 	}
@@ -161,6 +221,9 @@ func (h *PostproductionHandler) getRender(w http.ResponseWriter, r *http.Request
 }
 
 func (h *PostproductionHandler) executeRender(w http.ResponseWriter, r *http.Request) {
+	if !h.verifyRender(w, r) {
+		return
+	}
 	task, err := h.service.ExecuteRender(r.Context(), r.PathValue("renderId"))
 	if err != nil {
 		platformhttp.WriteErrorFrom(w, r, err)

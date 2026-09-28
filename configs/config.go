@@ -1,8 +1,10 @@
 package configs
 
 import (
+	"bufio"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -100,6 +102,7 @@ type SecurityConfig struct {
 	RequireAuth      bool
 	DevUserID        string
 	DevOrgID         string
+	GoogleClientID   string
 }
 
 type ObservabilityConfig struct {
@@ -110,7 +113,12 @@ type ObservabilityConfig struct {
 
 // Load reads configuration from the environment. Every value is explicit:
 // missing required settings produce an error rather than a silent fallback.
+//
+// A .env file in the working directory or any parent (repo root when the
+// binary runs from a subdirectory) is loaded first; variables already set in
+// the real environment always win.
 func Load() (*Config, error) {
+	loadDotEnv()
 	cfg := &Config{
 		Environment: envStr("DRAMASTUDIO_ENV", "development"),
 		Server: ServerConfig{
@@ -119,7 +127,7 @@ func Load() (*Config, error) {
 			WriteTimeout:    envDur("HTTP_WRITE_TIMEOUT", 60*time.Second),
 			IdleTimeout:     envDur("HTTP_IDLE_TIMEOUT", 60*time.Second),
 			ShutdownTimeout: envDur("HTTP_SHUTDOWN_TIMEOUT", 10*time.Second),
-			AllowedOrigins:  envList("ALLOWED_ORIGINS"),
+			AllowedOrigins:  defaultOrigins(envList("ALLOWED_ORIGINS")),
 			PublicURL:       os.Getenv("PUBLIC_URL"),
 		},
 		Store: StoreBackend(envStr("DRAMASTUDIO_STORE", defaultStore())),
@@ -159,6 +167,7 @@ func Load() (*Config, error) {
 			RequireAuth:      envBool("REQUIRE_AUTH", false),
 			DevUserID:        envStr("DEV_USER_ID", "dev-user"),
 			DevOrgID:         envStr("DEV_ORG_ID", "dev-org"),
+			GoogleClientID:   os.Getenv("GOOGLE_CLIENT_ID"),
 		},
 		Observability: ObservabilityConfig{
 			ServiceName:   envStr("OTEL_SERVICE_NAME", "dramastudio-api"),
@@ -235,6 +244,48 @@ func defaultEngine() string {
 	return string(EngineTemporal)
 }
 
+// loadDotEnv populates missing environment variables from the nearest .env
+// file, walking upward from the working directory. Existing env vars take
+// precedence. Missing or malformed files are ignored — real env-only
+// deployments are unaffected.
+func loadDotEnv() {
+	dir, err := os.Getwd()
+	if err != nil {
+		return
+	}
+	for {
+		path := filepath.Join(dir, ".env")
+		if f, err := os.Open(path); err == nil {
+			defer f.Close()
+			scan := bufio.NewScanner(f)
+			for scan.Scan() {
+				line := strings.TrimSpace(scan.Text())
+				if line == "" || strings.HasPrefix(line, "#") {
+					continue
+				}
+				key, value, ok := strings.Cut(line, "=")
+				if !ok {
+					continue
+				}
+				key = strings.TrimSpace(key)
+				if key == "" || os.Getenv(key) != "" {
+					continue // real environment wins
+				}
+				value = strings.TrimSpace(value)
+				value = strings.Trim(value, `"'`)
+				os.Setenv(key, value)
+			}
+			_ = scan.Err() // malformed/unreadable .env is non-fatal
+			return
+		}
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			return
+		}
+		dir = parent
+	}
+}
+
 // defaultStore picks the persistence driver per deployment profile:
 // development/test default to SQLite (self-contained, no server);
 // production defaults to PostgreSQL.
@@ -279,6 +330,15 @@ func envDur(key string, def time.Duration) time.Duration {
 		}
 	}
 	return def
+}
+
+// defaultOrigins allows the studio dev server when running in development
+// with no explicit allowlist. Production must set ALLOWED_ORIGINS.
+func defaultOrigins(list []string) []string {
+	if len(list) > 0 || envStr("DRAMASTUDIO_ENV", "development") != "development" {
+		return list
+	}
+	return []string{"http://localhost:8742", "http://127.0.0.1:8742"}
 }
 
 func envList(key string) []string {

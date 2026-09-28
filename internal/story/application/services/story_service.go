@@ -2,18 +2,62 @@ package services
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/google/uuid"
 
+	"dramastudio/internal/platform/events"
 	"dramastudio/internal/story/domain"
 )
 
 type StoryService struct {
-	repo domain.StoryRepository
+	repo   domain.StoryRepository
+	events *events.Bus // may be nil; set via SetEvents
 }
 
 func NewStoryService(repo domain.StoryRepository) *StoryService {
 	return &StoryService{repo: repo}
+}
+
+// SetEvents injects the domain event bus (§48). Nil-safe emitter.
+func (s *StoryService) SetEvents(b *events.Bus) {
+	s.events = b
+}
+
+// projectOfSeries resolves the owning project for event attribution.
+func (s *StoryService) projectOfSeries(ctx context.Context, seriesID string) string {
+	ser, err := s.repo.FindSeriesByID(ctx, seriesID)
+	if err != nil {
+		return ""
+	}
+	return ser.ProjectID
+}
+
+// projectOfSeason resolves season → series → project.
+func (s *StoryService) projectOfSeason(ctx context.Context, seasonID string) string {
+	se, err := s.repo.FindSeasonByID(ctx, seasonID)
+	if err != nil {
+		return ""
+	}
+	return s.projectOfSeries(ctx, se.SeriesID)
+}
+
+// projectOfEpisode resolves episode → season → series → project.
+func (s *StoryService) projectOfEpisode(ctx context.Context, episodeID string) string {
+	ep, err := s.repo.FindEpisodeByID(ctx, episodeID)
+	if err != nil {
+		return ""
+	}
+	return s.projectOfSeason(ctx, ep.SeasonID)
+}
+
+// ProjectOfEpisode is the exported resolver for cross-context ownership
+// checks (postproduction, media handlers verify episode-scoped params).
+func (s *StoryService) ProjectOfEpisode(ctx context.Context, episodeID string) (string, error) {
+	if p := s.projectOfEpisode(ctx, episodeID); p != "" {
+		return p, nil
+	}
+	return "", fmt.Errorf("episode %s not found", episodeID)
 }
 
 // EnsureSeries returns the project's series, creating it if absent. A
@@ -32,6 +76,8 @@ func (s *StoryService) EnsureSeries(ctx context.Context, projectID, title, descr
 	if err := s.repo.SaveSeries(ctx, series); err != nil {
 		return nil, err
 	}
+	s.events.Emit(ctx, events.SeriesCreated, projectID, series.ID,
+		fmt.Sprintf("Series %q created", title))
 	return series, nil
 }
 
@@ -57,6 +103,8 @@ func (s *StoryService) CreateSeason(ctx context.Context, seriesID, title, summar
 	if err := s.repo.SaveSeason(ctx, season); err != nil {
 		return nil, err
 	}
+	s.events.Emit(ctx, events.SeasonCreated, s.projectOfSeries(ctx, seriesID), season.ID,
+		fmt.Sprintf("Season %d: %s created", number, title))
 	return season, nil
 }
 
@@ -76,6 +124,8 @@ func (s *StoryService) CreateArc(ctx context.Context, seasonID, title string, nu
 	if err := s.repo.SaveArc(ctx, arc); err != nil {
 		return nil, err
 	}
+	s.events.Emit(ctx, events.ArcCreated, s.projectOfSeason(ctx, seasonID), arc.ID,
+		fmt.Sprintf("Arc %d: %s created", number, title))
 	return arc, nil
 }
 
@@ -86,6 +136,15 @@ func (s *StoryService) ListArcs(ctx context.Context, seasonID string) ([]*domain
 func (s *StoryService) CreateEpisode(ctx context.Context, seasonID, arcID, title, summary string, number int) (*domain.Episode, error) {
 	if _, err := s.repo.FindSeasonByID(ctx, seasonID); err != nil {
 		return nil, err
+	}
+	if arcID != "" {
+		arc, err := s.repo.FindArcByID(ctx, arcID)
+		if err != nil {
+			return nil, err
+		}
+		if arc.SeasonID != seasonID {
+			return nil, domain.ErrArcNotFound
+		}
 	}
 	ep := &domain.Episode{
 		ID:       "ep_" + uuid.NewString(),
@@ -99,6 +158,8 @@ func (s *StoryService) CreateEpisode(ctx context.Context, seasonID, arcID, title
 	if err := s.repo.SaveEpisode(ctx, ep); err != nil {
 		return nil, err
 	}
+	s.events.Emit(ctx, events.EpisodeCreated, s.projectOfSeason(ctx, seasonID), ep.ID,
+		fmt.Sprintf("Episode %d: %s created", number, title))
 	return ep, nil
 }
 
@@ -126,6 +187,24 @@ func (s *StoryService) SetEpisodeScript(ctx context.Context, episodeID, script s
 	return ep, nil
 }
 
+// UpdateEpisodeMeta patches title/summary; nil fields are left unchanged.
+func (s *StoryService) UpdateEpisodeMeta(ctx context.Context, episodeID string, title, summary *string) (*domain.Episode, error) {
+	ep, err := s.repo.FindEpisodeByID(ctx, episodeID)
+	if err != nil {
+		return nil, err
+	}
+	if title != nil {
+		ep.Title = *title
+	}
+	if summary != nil {
+		ep.Summary = *summary
+	}
+	if err := s.repo.SaveEpisode(ctx, ep); err != nil {
+		return nil, err
+	}
+	return ep, nil
+}
+
 func (s *StoryService) SetEpisodeStatus(ctx context.Context, episodeID string, status domain.EpisodeStatus) (*domain.Episode, error) {
 	ep, err := s.repo.FindEpisodeByID(ctx, episodeID)
 	if err != nil {
@@ -134,6 +213,10 @@ func (s *StoryService) SetEpisodeStatus(ctx context.Context, episodeID string, s
 	ep.Status = status
 	if err := s.repo.SaveEpisode(ctx, ep); err != nil {
 		return nil, err
+	}
+	if status == domain.EpisodeCompleted {
+		s.events.Emit(ctx, events.EpisodeCompleted, s.projectOfEpisode(ctx, episodeID), episodeID,
+			fmt.Sprintf("Episode %d completed", ep.Number))
 	}
 	return ep, nil
 }
@@ -155,6 +238,8 @@ func (s *StoryService) CreateScene(ctx context.Context, episodeID, title, descri
 	if err := s.repo.SaveScene(ctx, sc); err != nil {
 		return nil, err
 	}
+	s.events.Emit(ctx, events.SceneCreated, s.projectOfEpisode(ctx, episodeID), sc.ID,
+		fmt.Sprintf("Scene %d: %s created", number, title))
 	return sc, nil
 }
 
@@ -241,6 +326,8 @@ func (s *StoryService) CreatePlotThread(ctx context.Context, projectID, name, de
 	if err := s.repo.SavePlotThread(ctx, t); err != nil {
 		return nil, err
 	}
+	s.events.Emit(ctx, events.PlotThreadAdded, projectID, t.ID,
+		fmt.Sprintf("Plot thread opened: %s", name))
 	return t, nil
 }
 

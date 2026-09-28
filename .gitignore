@@ -33,6 +33,9 @@ coverage.out
 # Environment & Secret Files
 .env
 .env.*
+# ...but keep the committed templates
+!.env.example
+!.env.*.example
 *.pem
 *.key
 credentials.json
@@ -44,6 +47,9 @@ yarn-debug.log*
 yarn-error.log*
 tmp/
 temp/
+
+# Local dev database & object storage (see DATABASE_PATH / LOCAL_STORAGE_DIR)
+data/
 
 # Agent Metadata & IDE Directories
 .idea/

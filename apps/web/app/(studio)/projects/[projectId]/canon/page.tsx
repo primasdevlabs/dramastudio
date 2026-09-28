@@ -5,11 +5,12 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { ShieldCheck, Plus, CheckCircle2, AlertTriangle, XCircle } from "lucide-react";
 import { Paper, Group, Stack, Title, Text, Badge, Button, Modal, TextInput, Table, ThemeIcon } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
+import { useParams } from "next/navigation";
 import { api } from "@/lib/api/client";
 import { StoryFact } from "@/lib/api/types";
 
-export default function CanonPage({ params }: { params: { projectId: string } }) {
-  const { projectId } = params;
+export default function CanonPage() {
+  const { projectId } = useParams<{ projectId: string }>();
   const queryClient = useQueryClient();
 
   const [subject, setSubject] = useState("");
@@ -20,19 +21,22 @@ export default function CanonPage({ params }: { params: { projectId: string } })
   const { data: facts, isLoading } = useQuery({
     queryKey: ["canon-facts", projectId],
     queryFn: async () => {
-      const res = await api.get<{ facts: StoryFact[] }>(`/v1/canon/facts?project_id=${projectId}`);
-      return res.facts || [];
+      const res = await api.get<{ items: StoryFact[] }>(`/v1/projects/${projectId}/canon/facts`);
+      return res.items || [];
     },
   });
 
   const createMutation = useMutation({
     mutationFn: async () => {
-      return api.post<StoryFact>("/v1/canon/facts", {
+      return api.post<StoryFact>(`/v1/projects/${projectId}/canon/facts`, {
         subject,
         predicate,
         object,
-        introduced: "Episode 1",
-        valid_from: "Episode 1",
+        type: "fact",
+        introduced_episode: "Episode 1",
+        effective_from: "Episode 1",
+        source: "manual",
+        confidence: 1.0,
       });
     },
     onSuccess: (fact) => {
@@ -168,7 +172,7 @@ export default function CanonPage({ params }: { params: { projectId: string } })
                   <Table.Td fw={600} c="white">
                     {fact.object}
                   </Table.Td>
-                  <Table.Td c="dimmed" className="font-mono">{fact.introduced || "Episode 1"}</Table.Td>
+                  <Table.Td c="dimmed" className="font-mono">{fact.introduced_episode || "—"}</Table.Td>
                   <Table.Td>
                     {fact.status === "canonical" ? (
                       <Badge color="emerald" variant="light" size="sm" className="font-mono" leftSection={<CheckCircle2 size={12} />}>

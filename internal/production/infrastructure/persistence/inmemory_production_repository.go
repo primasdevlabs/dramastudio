@@ -141,11 +141,14 @@ func (r *InMemoryProductionRepository) FindShotByID(ctx context.Context, id stri
 	return s, nil
 }
 
-func (r *InMemoryProductionRepository) ListShots(ctx context.Context, episodeID, sceneID string) ([]*domain.Shot, error) {
+func (r *InMemoryProductionRepository) ListShots(ctx context.Context, projectID, episodeID, sceneID string) ([]*domain.Shot, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	res := make([]*domain.Shot, 0)
 	for _, s := range r.shots {
+		if s.ProjectID != projectID {
+			continue
+		}
 		if sceneID != "" && s.SceneID != sceneID {
 			continue
 		}

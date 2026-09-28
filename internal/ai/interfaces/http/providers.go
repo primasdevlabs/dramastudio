@@ -49,6 +49,9 @@ func (h *AIHandler) listProviders(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *AIHandler) createProvider(w http.ResponseWriter, r *http.Request) {
+	if !requireOwner(w, r) {
+		return
+	}
 	var req providerReq
 	if !platformhttp.DecodeAndValidate(w, r, &req) {
 		return
@@ -69,6 +72,9 @@ func (h *AIHandler) createProvider(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *AIHandler) testProvider(w http.ResponseWriter, r *http.Request) {
+	if !requireOwner(w, r) {
+		return
+	}
 	if err := h.admin.TestProvider(r.Context(), r.PathValue("providerId")); err != nil {
 		platformhttp.WriteErrorFrom(w, r, err)
 		return
@@ -77,6 +83,9 @@ func (h *AIHandler) testProvider(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *AIHandler) discoverModels(w http.ResponseWriter, r *http.Request) {
+	if !requireOwner(w, r) {
+		return
+	}
 	models, err := h.admin.DiscoverModels(r.Context(), r.PathValue("providerId"))
 	if err != nil {
 		platformhttp.WriteErrorFrom(w, r, err)
@@ -86,6 +95,9 @@ func (h *AIHandler) discoverModels(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *AIHandler) deleteProvider(w http.ResponseWriter, r *http.Request) {
+	if !requireOwner(w, r) {
+		return
+	}
 	if err := h.admin.DeleteProvider(r.Context(), r.PathValue("providerId")); err != nil {
 		platformhttp.WriteErrorFrom(w, r, err)
 		return

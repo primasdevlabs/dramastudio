@@ -99,19 +99,36 @@ type AuthConfig struct {
 	RequireAuth bool
 	DevUserID   string
 	DevOrgID    string
+	// APIKeys authenticates X-API-Key service credentials (§8). Nil disables
+	// the header path.
+	APIKeys KeyAuthenticator
 }
+
+// KeyAuthenticator resolves an X-API-Key credential into a principal.
+type KeyAuthenticator func(ctx context.Context, key string) (security.Principal, error)
 
 // Authenticator validates bearer tokens into principals.
 type Authenticator interface {
 	Validate(token string) (security.Principal, error)
 }
 
-// Auth authenticates requests. When RequireAuth is false and no token is
-// presented, a development principal is injected so local flows still work.
+// Auth authenticates requests: Bearer JWT first, then X-API-Key service
+// credentials. When RequireAuth is false and no credential is presented, a
+// development principal is injected so local flows still work.
 func Auth(cfg AuthConfig, authn Authenticator) Middleware {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			token := bearerToken(r)
+			apiKey := strings.TrimSpace(r.Header.Get("X-API-Key"))
+			if token == "" && apiKey != "" && cfg.APIKeys != nil {
+				p, err := cfg.APIKeys(r.Context(), apiKey)
+				if err != nil {
+					WriteError(w, http.StatusUnauthorized, "INVALID_API_KEY", "Invalid or revoked API key", RequestIDFrom(r), nil)
+					return
+				}
+				next.ServeHTTP(w, r.WithContext(security.WithPrincipal(r.Context(), p)))
+				return
+			}
 			if token == "" {
 				if cfg.RequireAuth {
 					WriteError(w, http.StatusUnauthorized, "UNAUTHENTICATED", "Authentication required", RequestIDFrom(r), nil)
@@ -124,6 +141,10 @@ func Auth(cfg AuthConfig, authn Authenticator) Middleware {
 					Permissions: []string{"*"},
 				}
 				next.ServeHTTP(w, r.WithContext(security.WithPrincipal(r.Context(), p)))
+				return
+			}
+			if authn == nil {
+				WriteError(w, http.StatusUnauthorized, "AUTH_NOT_CONFIGURED", "Token service is not configured", RequestIDFrom(r), nil)
 				return
 			}
 			p, err := authn.Validate(token)
@@ -140,6 +161,11 @@ func bearerToken(r *http.Request) string {
 	h := r.Header.Get("Authorization")
 	if strings.HasPrefix(h, "Bearer ") {
 		return strings.TrimSpace(strings.TrimPrefix(h, "Bearer "))
+	}
+	// EventSource cannot send headers; allow the token as a query param for
+	// the SSE stream only.
+	if r.URL.Path == "/v1/events" {
+		return strings.TrimSpace(r.URL.Query().Get("access_token"))
 	}
 	return ""
 }

@@ -200,7 +200,12 @@ func (h *ContinuityHandler) resolveIssue(w http.ResponseWriter, r *http.Request)
 	if !platformhttp.DecodeAndValidate(w, r, &req) {
 		return
 	}
-	issue, err := h.service.ResolveIssue(r.Context(), r.PathValue("issueId"), req.Resolution, req.WontFix)
+	issue, err := h.service.GetIssue(r.Context(), r.PathValue("issueId"))
+	if err != nil || issue.ProjectID != r.PathValue("projectId") {
+		platformhttp.WriteError(w, http.StatusNotFound, "ISSUE_NOT_FOUND", "Continuity issue not found", platformhttp.RequestIDFrom(r), nil)
+		return
+	}
+	issue, err = h.service.ResolveIssue(r.Context(), issue.ID, req.Resolution, req.WontFix)
 	if err != nil {
 		platformhttp.WriteError(w, http.StatusNotFound, "ISSUE_NOT_FOUND", "Continuity issue not found", platformhttp.RequestIDFrom(r), nil)
 		return

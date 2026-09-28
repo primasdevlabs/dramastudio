@@ -127,16 +127,28 @@ func (h *AgentsHandler) createTask(w http.ResponseWriter, r *http.Request) {
 	platformhttp.WriteJSON(w, http.StatusCreated, t)
 }
 
-func (h *AgentsHandler) getTask(w http.ResponseWriter, r *http.Request) {
+// verifyTask confirms taskId belongs to the path project.
+func (h *AgentsHandler) verifyTask(w http.ResponseWriter, r *http.Request) bool {
 	t, err := h.service.GetTask(r.Context(), r.PathValue("taskId"))
-	if err != nil {
+	if err != nil || t.ProjectID != r.PathValue("projectId") {
 		platformhttp.WriteError(w, http.StatusNotFound, "TASK_NOT_FOUND", "Agent task not found", platformhttp.RequestIDFrom(r), nil)
+		return false
+	}
+	return true
+}
+
+func (h *AgentsHandler) getTask(w http.ResponseWriter, r *http.Request) {
+	if !h.verifyTask(w, r) {
 		return
 	}
+	t, _ := h.service.GetTask(r.Context(), r.PathValue("taskId"))
 	platformhttp.WriteJSON(w, http.StatusOK, t)
 }
 
 func (h *AgentsHandler) taskTransition(w http.ResponseWriter, r *http.Request, fn func(ctx context.Context, id string) (*domain.Task, error)) {
+	if !h.verifyTask(w, r) {
+		return
+	}
 	t, err := fn(r.Context(), r.PathValue("taskId"))
 	if err != nil {
 		if err == domain.ErrInvalidTransition {
@@ -162,6 +174,9 @@ func (h *AgentsHandler) retryTask(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *AgentsHandler) completeTask(w http.ResponseWriter, r *http.Request) {
+	if !h.verifyTask(w, r) {
+		return
+	}
 	var req completeTaskReq
 	if !platformhttp.DecodeAndValidate(w, r, &req) {
 		return

@@ -9,6 +9,7 @@ import (
 
 	"github.com/google/uuid"
 
+	"dramastudio/internal/platform/events"
 	"dramastudio/internal/platform/storage"
 	"dramastudio/internal/postproduction/domain"
 )
@@ -24,10 +25,16 @@ type PostproductionService struct {
 	store    storage.ObjectStorage
 	keys     storage.Keys
 	workDir  string
+	events   *events.Bus // may be nil; set via SetEvents
 }
 
 func NewPostproductionService(repo domain.PostproductionRepository, renderer Renderer, store storage.ObjectStorage, workDir string) *PostproductionService {
 	return &PostproductionService{repo: repo, renderer: renderer, store: store, keys: storage.NewKeys(), workDir: workDir}
+}
+
+// SetEvents injects the domain event bus (§48). Nil-safe emitter.
+func (s *PostproductionService) SetEvents(b *events.Bus) {
+	s.events = b
 }
 
 // SaveTimeline stores a new immutable timeline version for the episode.
@@ -120,6 +127,8 @@ func (s *PostproductionService) ExecuteRender(ctx context.Context, renderID stri
 		task.Error = err.Error()
 		task.FinishedAt = &now
 		_ = s.repo.SaveRender(ctx, task)
+		s.events.Emit(ctx, events.RenderFailed, task.ProjectID, task.ID,
+			fmt.Sprintf("Render failed: %s", err))
 		return nil, err
 	}
 
@@ -167,6 +176,8 @@ func (s *PostproductionService) ExecuteRender(ctx context.Context, renderID stri
 	}
 	tl.Status = domain.TimelineRendered
 	_ = s.repo.SaveTimeline(ctx, tl)
+	s.events.Emit(ctx, events.RenderCompleted, task.ProjectID, task.ID,
+		fmt.Sprintf("Render completed for episode %s", task.EpisodeID))
 	return task, nil
 }
 

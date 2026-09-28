@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   FileText,
   MessageSquare,
@@ -29,7 +29,7 @@ import {
 } from "@mantine/core";
 import { useParams } from "next/navigation";
 import { api } from "@/lib/api/client";
-import type { Episode, Scene } from "@/lib/api/types";
+import type { Episode, Scene, Shot, Asset, EpisodeTimeline, ContinuityIssue } from "@/lib/api/types";
 
 const PHASE_STATUS: Record<string, { done: boolean; label: string }> = {
   Script: { done: false, label: "Script" },
@@ -54,17 +54,121 @@ export default function EpisodeWorkspacePage({
 
   const { data: episode } = useQuery({
     queryKey: ["episodes", "detail", episodeId],
-    queryFn: () => api.get<Episode>(`/v1/episodes/${episodeId}`).catch(() => null),
+    queryFn: () =>
+      api
+        .get<Episode>(`/v1/projects/${projectId}/seasons/${seasonId}/episodes/${episodeId}`)
+        .catch(() => null),
+    enabled: Boolean(projectId && seasonId && episodeId),
   });
 
   const { data: scenes } = useQuery({
     queryKey: ["scenes", episodeId],
     queryFn: async () => {
-      const res = await api.get<{ scenes: Scene[] }>(
-        `/v1/episodes/${episodeId}/scenes`
+      const res = await api.get<{ items: Scene[] }>(
+        `/v1/projects/${projectId}/seasons/${seasonId}/episodes/${episodeId}/scenes`
       );
-      return res.scenes ?? [];
+      return res.items ?? [];
     },
+    enabled: Boolean(projectId && seasonId && episodeId),
+  });
+
+  const queryClient = useQueryClient();
+  const invalidateEpisode = () =>
+    queryClient.invalidateQueries({ queryKey: ["episodes", "detail", episodeId] });
+
+  const { data: shots } = useQuery({
+    queryKey: ["shots", projectId, episodeId],
+    queryFn: async () => {
+      const res = await api.get<{ items: Shot[] }>(
+        `/v1/projects/${projectId}/production/shots?episode_id=${episodeId}`
+      );
+      return res.items ?? [];
+    },
+    enabled: Boolean(projectId && episodeId),
+  });
+
+  const { data: assets } = useQuery({
+    queryKey: ["assets", projectId, "episode", episodeId],
+    queryFn: async () => {
+      const res = await api.get<{ items: Asset[] }>(
+        `/v1/projects/${projectId}/media/assets`
+      );
+      return (res.items ?? []).filter((a) => a.episode_id === episodeId);
+    },
+    enabled: Boolean(projectId && episodeId),
+  });
+
+  const { data: timeline } = useQuery({
+    queryKey: ["timeline", projectId, episodeId],
+    queryFn: () =>
+      api
+        .get<EpisodeTimeline>(
+          `/v1/projects/${projectId}/postproduction/timelines?episode_id=${episodeId}`
+        )
+        .catch(() => null),
+    enabled: Boolean(projectId && episodeId),
+  });
+
+  const { data: continuityIssues } = useQuery({
+    queryKey: ["continuity-issues", projectId, episodeId],
+    queryFn: async () => {
+      const res = await api.get<{ items: ContinuityIssue[] }>(
+        `/v1/projects/${projectId}/continuity/issues`
+      );
+      return (res.items ?? []).filter((i) => i.episode_id === episodeId);
+    },
+    enabled: Boolean(projectId && episodeId),
+  });
+
+  const aiGenerate = useMutation({
+    mutationFn: (capability: string) =>
+      api.post(`/v1/projects/${projectId}/ai/generate`, {
+        capability,
+        input: { episode_id: episodeId },
+      }),
+    onSuccess: invalidateEpisode,
+  });
+
+  const generateAsset = useMutation({
+    mutationFn: (vars: { capability: string; type: string; prompt: string }) =>
+      api.post(`/v1/projects/${projectId}/media/assets`, {
+        ...vars,
+        episode_id: episodeId,
+      }),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: ["assets", projectId] }),
+  });
+
+  const approveScript = useMutation({
+    mutationFn: () =>
+      api.patch<Episode>(
+        `/v1/projects/${projectId}/seasons/${seasonId}/episodes/${episodeId}`,
+        { status: "SCRIPTED" }
+      ),
+    onSuccess: invalidateEpisode,
+  });
+
+  const approveShot = useMutation({
+    mutationFn: (shotId: string) =>
+      api.post(`/v1/projects/${projectId}/production/shots/${shotId}/approve`, {}),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: ["shots", projectId, episodeId] }),
+  });
+
+  const directorStep = useMutation({
+    mutationFn: () =>
+      api.post(`/v1/projects/${projectId}/agents/director/step`, {
+        episode_id: episodeId,
+      }),
+  });
+
+  const renderEpisode = useMutation({
+    mutationFn: () =>
+      api.post(`/v1/projects/${projectId}/postproduction/renders`, {
+        episode_id: episodeId,
+        format: "mp4",
+        resolution: "1080x1920",
+      }),
   });
 
   return (
@@ -100,6 +204,8 @@ export default function EpisodeWorkspacePage({
               color="terracotta"
               size="xs"
               leftSection={<Bot size={14} />}
+              loading={directorStep.isPending}
+              onClick={() => directorStep.mutate()}
             >
               Trigger Director
             </Button>
@@ -108,6 +214,8 @@ export default function EpisodeWorkspacePage({
               color="terracotta"
               size="xs"
               leftSection={<Play size={14} />}
+              loading={renderEpisode.isPending}
+              onClick={() => renderEpisode.mutate()}
             >
               Render Episode
             </Button>
@@ -178,18 +286,37 @@ export default function EpisodeWorkspacePage({
                 Episode Script
               </Text>
               <Group gap="sm">
-                <Button variant="outline" color="terracotta" size="xs">
+                <Button
+                  variant="outline"
+                  color="terracotta"
+                  size="xs"
+                  loading={aiGenerate.isPending}
+                  onClick={() => aiGenerate.mutate("script_writing")}
+                >
                   Generate Script
                 </Button>
-                <Button variant="light" color="emerald" size="xs">
+                <Button
+                  variant="light"
+                  color="emerald"
+                  size="xs"
+                  disabled={!episode?.script}
+                  loading={approveScript.isPending}
+                  onClick={() => approveScript.mutate()}
+                >
                   Approve
                 </Button>
               </Group>
             </Group>
             <Paper p="md" radius="sm" className="bg-studio-panel border border-studio-border min-h-[300px]">
-              <Text size="xs" c="dimmed" fs="italic">
-                Script draft is empty. Click "Draft Screenplay" to write the episode screenplay from the Series Bible and season arc.
-              </Text>
+              {episode?.script ? (
+                <Text size="xs" c="white" style={{ whiteSpace: "pre-wrap" }} className="font-mono">
+                  {episode.script}
+                </Text>
+              ) : (
+                <Text size="xs" c="dimmed" fs="italic">
+                  Script draft is empty. Click "Generate Script" to write the episode screenplay from the Series Bible and season arc.
+                </Text>
+              )}
             </Paper>
           </Paper>
         </Tabs.Panel>
@@ -201,13 +328,19 @@ export default function EpisodeWorkspacePage({
               <Text fw={700} size="sm" c="white">
                 Dialogue Lines
               </Text>
-              <Button variant="outline" color="terracotta" size="xs">
+              <Button
+                variant="outline"
+                color="terracotta"
+                size="xs"
+                loading={aiGenerate.isPending}
+                onClick={() => aiGenerate.mutate("dialogue_writing")}
+              >
                 Generate Dialogue
               </Button>
             </Group>
             <Paper p="md" radius="sm" className="bg-studio-panel border border-studio-border min-h-[200px]">
               <Text size="xs" c="dimmed" fs="italic">
-                Dialogue is a separately generated artifact. Each line includes
+                Dialogue is generated into the episode script. Each line includes
                 character, emotion, intent, and delivery direction.
               </Text>
             </Paper>
@@ -269,27 +402,63 @@ export default function EpisodeWorkspacePage({
                 Storyboard
               </Text>
               <Group gap="sm">
-                <Button variant="outline" color="terracotta" size="xs">
+                <Button
+                  variant="outline"
+                  color="terracotta"
+                  size="xs"
+                  loading={aiGenerate.isPending}
+                  onClick={() => aiGenerate.mutate("storyboard")}
+                >
                   Generate Storyboard
-                </Button>
-                <Button variant="light" color="emerald" size="xs">
-                  Approve
                 </Button>
               </Group>
             </Group>
             <Paper
               p="xl"
               radius="sm"
-              className="bg-studio-panel border border-studio-border min-h-[300px] flex items-center justify-center"
+              className="bg-studio-panel border border-studio-border min-h-[300px]"
             >
-              <Stack align="center" gap="sm">
-                <ThemeIcon variant="light" color="terracotta" size={40} radius="md">
-                  <Image size={20} />
-                </ThemeIcon>
-                <Text size="xs" c="dimmed">
-                  Storyboard panels appear here after generation
-                </Text>
-              </Stack>
+              {(shots ?? []).length > 0 ? (
+                <Stack gap="xs">
+                  {(shots ?? []).map((shot) => (
+                    <Paper key={shot.id} p="sm" radius="sm" className="bg-studio-card border border-studio-border">
+                      <Group justify="space-between">
+                        <Group gap="sm">
+                          <Badge color="terracotta" variant="outline" size="xs" className="font-mono">
+                            #{shot.seq}
+                          </Badge>
+                          <Text size="xs" c="white">{shot.description}</Text>
+                        </Group>
+                        <Group gap="xs">
+                          <Badge color={shot.status === "approved" ? "emerald" : "gray"} variant="light" size="xs">
+                            {shot.status}
+                          </Badge>
+                          {shot.status !== "approved" && (
+                            <Button
+                              variant="subtle"
+                              color="emerald"
+                              size="compact-xs"
+                              loading={approveShot.isPending}
+                              onClick={() => approveShot.mutate(shot.id)}
+                            >
+                              Approve
+                            </Button>
+                          )}
+                        </Group>
+                      </Group>
+                    </Paper>
+                  ))}
+                </Stack>
+              ) : (
+                <Stack align="center" gap="sm" py="xl">
+                  <ThemeIcon variant="light" color="terracotta" size={40} radius="md">
+                    <Image size={20} />
+                  </ThemeIcon>
+                  <Text size="xs" c="dimmed">
+                    Storyboard shots appear here after generation
+                  </Text>
+                </Stack>
+              )}
             </Paper>
           </Paper>
         </Tabs.Panel>
@@ -301,23 +470,50 @@ export default function EpisodeWorkspacePage({
               <Text fw={700} size="sm" c="white">
                 Video Shots
               </Text>
-              <Button variant="outline" color="terracotta" size="xs">
+              <Button
+                variant="outline"
+                color="terracotta"
+                size="xs"
+                loading={generateAsset.isPending}
+                onClick={() =>
+                  generateAsset.mutate({
+                    capability: "video_generation",
+                    type: "video",
+                    prompt: `Episode ${episode?.number ?? ""}: ${episode?.title ?? ""}`,
+                  })
+                }
+              >
                 Generate Video
               </Button>
             </Group>
             <Paper
               p="xl"
               radius="sm"
-              className="bg-studio-panel border border-studio-border min-h-[300px] flex items-center justify-center"
+              className="bg-studio-panel border border-studio-border min-h-[300px]"
             >
-              <Stack align="center" gap="sm">
-                <ThemeIcon variant="light" color="terracotta" size={40} radius="md">
-                  <Video size={20} />
-                </ThemeIcon>
-                <Text size="xs" c="dimmed">
-                  Generated video shots with 9:16 vertical previews
-                </Text>
-              </Stack>
+              {(assets ?? []).filter((a) => a.type === "video").length > 0 ? (
+                <Stack gap="xs">
+                  {(assets ?? [])
+                    .filter((a) => a.type === "video")
+                    .map((a) => (
+                      <Paper key={a.id} p="sm" radius="sm" className="bg-studio-card border border-studio-border">
+                        <Group justify="space-between">
+                          <Text size="xs" c="white" className="font-mono">{a.id} — {a.status}</Text>
+                          <Text size="xs" c="dimmed">{a.provider}/{a.model}</Text>
+                        </Group>
+                      </Paper>
+                    ))}
+                </Stack>
+              ) : (
+                <Stack align="center" gap="sm" py="xl">
+                  <ThemeIcon variant="light" color="terracotta" size={40} radius="md">
+                    <Video size={20} />
+                  </ThemeIcon>
+                  <Text size="xs" c="dimmed">
+                    Generated video shots with 9:16 vertical previews
+                  </Text>
+                </Stack>
+              )}
             </Paper>
           </Paper>
         </Tabs.Panel>
@@ -331,12 +527,25 @@ export default function EpisodeWorkspacePage({
             <Paper
               p="xl"
               radius="sm"
-              className="bg-studio-panel border border-studio-border min-h-[200px] flex items-center justify-center"
+              className="bg-studio-panel border border-studio-border min-h-[200px]"
             >
-              <Text size="xs" c="dimmed">
-                All generated media assets for this episode — images, video,
-                audio, renders.
-              </Text>
+              {(assets ?? []).length > 0 ? (
+                <Stack gap="xs">
+                  {(assets ?? []).map((a) => (
+                    <Paper key={a.id} p="sm" radius="sm" className="bg-studio-card border border-studio-border">
+                      <Group justify="space-between">
+                        <Text size="xs" c="white" className="font-mono">{a.type} — {a.id}</Text>
+                        <Badge color="gray" variant="outline" size="xs">{a.status}</Badge>
+                      </Group>
+                    </Paper>
+                  ))}
+                </Stack>
+              ) : (
+                <Text size="xs" c="dimmed" ta="center" py="xl">
+                  All generated media assets for this episode — images, video,
+                  audio, renders.
+                </Text>
+              )}
             </Paper>
           </Paper>
         </Tabs.Panel>
@@ -348,28 +557,44 @@ export default function EpisodeWorkspacePage({
               <Text fw={700} size="sm" c="white">
                 Audio Tracks
               </Text>
-              <Button variant="outline" color="terracotta" size="xs">
+              <Button
+                variant="outline"
+                color="terracotta"
+                size="xs"
+                loading={generateAsset.isPending}
+                onClick={() =>
+                  generateAsset.mutate({
+                    capability: "voice",
+                    type: "voice",
+                    prompt: `Dialogue voiceover for ${episode?.title ?? "episode"}`,
+                  })
+                }
+              >
                 Generate Audio
               </Button>
             </Group>
             <Stack gap="xs">
-              {["Dialogue", "Music / Score", "Sound Effects"].map((track) => (
-                <Paper
-                  key={track}
-                  p="sm"
-                  radius="sm"
-                  className="bg-studio-panel border border-studio-border"
-                >
-                  <Group justify="space-between">
-                    <Text size="xs" fw={600} c="white">
-                      {track}
-                    </Text>
-                    <Badge color="gray" variant="outline" size="xs">
-                      Not generated
-                    </Badge>
-                  </Group>
-                </Paper>
-              ))}
+              {(["voice", "music", "sfx"] as const).map((t) => {
+                const trackAssets = (assets ?? []).filter((a) => a.type === t);
+                const label = t === "voice" ? "Dialogue" : t === "music" ? "Music / Score" : "Sound Effects";
+                return (
+                  <Paper
+                    key={t}
+                    p="sm"
+                    radius="sm"
+                    className="bg-studio-panel border border-studio-border"
+                  >
+                    <Group justify="space-between">
+                      <Text size="xs" fw={600} c="white">
+                        {label}
+                      </Text>
+                      <Badge color={trackAssets.length > 0 ? "emerald" : "gray"} variant="outline" size="xs">
+                        {trackAssets.length > 0 ? `${trackAssets.length} generated` : "Not generated"}
+                      </Badge>
+                    </Group>
+                  </Paper>
+                );
+              })}
             </Stack>
           </Paper>
         </Tabs.Panel>
@@ -381,27 +606,38 @@ export default function EpisodeWorkspacePage({
               <Text fw={700} size="sm" c="white">
                 Assembly Timeline
               </Text>
-              <Button variant="filled" color="terracotta" size="xs">
+              <Button
+                variant="filled"
+                color="terracotta"
+                size="xs"
+                loading={renderEpisode.isPending}
+                onClick={() => renderEpisode.mutate()}
+              >
                 Render Episode
               </Button>
             </Group>
             <Stack gap="sm">
               {[
-                { label: "Video Track", color: "studio-accent" },
-                { label: "Dialogue Track", color: "amber-400" },
-                { label: "Music Track", color: "emerald-400" },
-                { label: "SFX Track", color: "studio-muted" },
+                { label: "Video Track", items: timeline?.video_tracks ?? [] },
+                { label: "Audio Track", items: timeline?.audio_tracks ?? [] },
               ].map((track) => (
                 <div key={track.label} className="space-y-1">
                   <Text size="xs" c="dimmed" fw={600}>
                     {track.label}
+                    {timeline ? ` — v${timeline.version} (${timeline.status})` : ""}
                   </Text>
-                  <div
-                    className={`h-10 bg-studio-panel border border-studio-border rounded p-2 flex gap-2 overflow-x-auto`}
-                  >
-                    <div className="h-full bg-studio-accent/10 border border-studio-accent/20 rounded px-3 flex items-center text-xs text-studio-muted font-mono min-w-[160px]">
-                      No clips
-                    </div>
+                  <div className="h-10 bg-studio-panel border border-studio-border rounded p-2 flex gap-2 overflow-x-auto">
+                    {track.items.length > 0 ? (
+                      track.items.map((t) => (
+                        <div key={t.id} className="h-full bg-studio-accent/10 border border-studio-accent/20 rounded px-3 flex items-center text-xs text-studio-muted font-mono min-w-[160px]">
+                          {t.shot_id} · {t.start_time}s +{t.duration}s
+                        </div>
+                      ))
+                    ) : (
+                      <div className="h-full bg-studio-accent/10 border border-studio-accent/20 rounded px-3 flex items-center text-xs text-studio-muted font-mono min-w-[160px]">
+                        No clips
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}
@@ -418,17 +654,36 @@ export default function EpisodeWorkspacePage({
             <Paper
               p="xl"
               radius="sm"
-              className="bg-studio-panel border border-studio-border min-h-[200px] flex items-center justify-center"
+              className="bg-studio-panel border border-studio-border min-h-[200px]"
             >
-              <Stack align="center" gap="sm">
-                <ThemeIcon variant="light" color="emerald" size={40} radius="md">
-                  <ShieldCheck size={20} />
-                </ThemeIcon>
-                <Text size="xs" c="dimmed">
-                  Continuity checks run automatically. Issues appear here when
-                  detected.
-                </Text>
-              </Stack>
+              {(continuityIssues ?? []).length > 0 ? (
+                <Stack gap="xs">
+                  {(continuityIssues ?? []).map((issue) => (
+                    <Paper key={issue.id} p="sm" radius="sm" className="bg-studio-card border border-studio-border">
+                      <Group justify="space-between">
+                        <Text size="xs" c="white">{issue.entity}: expected {issue.expected_state}, found {issue.actual_state}</Text>
+                        <Badge
+                          color={issue.status === "resolved" || issue.status === "wontfix" ? "emerald" : "amber"}
+                          variant="light"
+                          size="xs"
+                        >
+                          {issue.status}
+                        </Badge>
+                      </Group>
+                    </Paper>
+                  ))}
+                </Stack>
+              ) : (
+                <Stack align="center" gap="sm" py="xl">
+                  <ThemeIcon variant="light" color="emerald" size={40} radius="md">
+                    <ShieldCheck size={20} />
+                  </ThemeIcon>
+                  <Text size="xs" c="dimmed">
+                    Continuity checks run automatically. Issues appear here when
+                    detected.
+                  </Text>
+                </Stack>
+              )}
             </Paper>
           </Paper>
         </Tabs.Panel>

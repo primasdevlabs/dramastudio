@@ -3,33 +3,32 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Film, Play, Camera } from "lucide-react";
+import { useParams } from "next/navigation";
 import { api } from "@/lib/api/client";
 import { Asset } from "@/lib/api/types";
 
-export default function StoryboardPage({ params }: { params: { projectId: string } }) {
-  const { projectId } = params;
+export default function StoryboardPage() {
+  const { projectId } = useParams<{ projectId: string }>();
   const queryClient = useQueryClient();
 
   const [prompt, setPrompt] = useState("Sarah looking suspiciously at phone in dark apartment");
-  const [shotId, setShotId] = useState("SHOT_001");
-  const [provider, setProvider] = useState("wan");
-
+  const [shotId, setShotId] = useState("");
   const { data: assets, isLoading } = useQuery({
     queryKey: ["assets", projectId],
     queryFn: async () => {
-      const res = await api.get<{ assets: Asset[] }>(`/v1/media/assets?project_id=${projectId}`);
-      return res.assets || [];
+      const res = await api.get<{ items: Asset[] }>(`/v1/projects/${projectId}/media/assets`);
+      return res.items || [];
     },
+    enabled: Boolean(projectId),
   });
 
   const generateMutation = useMutation({
     mutationFn: async () => {
-      return api.post<Asset>("/v1/media/generate", {
-        project_id: projectId,
+      return api.post<{ job: unknown; asset: Asset }>(`/v1/projects/${projectId}/media/assets`, {
         shot_id: shotId,
         prompt,
-        provider,
         type: "video",
+        capability: "video_generation",
       });
     },
     onSuccess: () => {
@@ -76,6 +75,7 @@ export default function StoryboardPage({ params }: { params: { projectId: string
               type="text"
               value={shotId}
               onChange={(e) => setShotId(e.target.value)}
+              placeholder="e.g. shot_012"
               className="w-full bg-studio-panel border border-studio-border rounded px-3 py-2 text-xs text-white font-mono focus:outline-none focus:border-studio-accent"
             />
           </div>
@@ -114,9 +114,9 @@ export default function StoryboardPage({ params }: { params: { projectId: string
 
               <div className="p-4 space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-mono font-bold text-white uppercase">{asset.shot_id || "SHOT_001"}</span>
+                  <span className="text-xs font-mono font-bold text-white uppercase">{asset.shot_id || "—"}</span>
                   <span className="px-2 py-0.5 rounded bg-studio-panel text-studio-text text-xs font-mono border border-studio-border">
-                    Wan 2.1
+                    {asset.model || asset.provider || "—"}
                   </span>
                 </div>
 
@@ -125,8 +125,8 @@ export default function StoryboardPage({ params }: { params: { projectId: string
                 </p>
 
                 <div className="flex items-center justify-between text-xs pt-2 border-t border-studio-border/60 font-mono">
-                  <span className="text-studio-muted">Take 01</span>
-                  <span className="text-emerald-400 font-semibold">${asset.cost || 0.05}</span>
+                  <span className="text-studio-muted">v{asset.version || 1}</span>
+                  <span className="text-emerald-400 font-semibold">${(asset.cost ?? 0).toFixed(3)}</span>
                 </div>
               </div>
             </div>

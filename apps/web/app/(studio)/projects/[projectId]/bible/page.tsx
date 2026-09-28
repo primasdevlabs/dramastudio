@@ -2,14 +2,15 @@
 
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useParams } from "next/navigation";
 import { BookOpen, Save, CheckCircle2 } from "lucide-react";
 import { Paper, Group, Stack, Title, Text, Badge, Button, TextInput, Textarea, ThemeIcon, Alert, SimpleGrid } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
 import { api } from "@/lib/api/client";
 import { SeriesBible } from "@/lib/api/types";
 
-export default function SeriesBiblePage({ params }: { params: { projectId: string } }) {
-  const { projectId } = params;
+export default function SeriesBiblePage() {
+  const { projectId } = useParams<{ projectId: string }>();
   const queryClient = useQueryClient();
 
   const { data: bible } = useQuery({

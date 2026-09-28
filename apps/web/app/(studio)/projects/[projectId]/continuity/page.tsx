@@ -2,24 +2,25 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { ShieldCheck, AlertOctagon, AlertTriangle, Info, CheckCircle2 } from "lucide-react";
+import { useParams } from "next/navigation";
 import { api } from "@/lib/api/client";
 import { ContinuityIssue } from "@/lib/api/types";
 
-export default function ContinuityCenterPage({ params }: { params: { projectId: string } }) {
-  const { projectId } = params;
+export default function ContinuityCenterPage() {
+  const { projectId } = useParams<{ projectId: string }>();
   const queryClient = useQueryClient();
 
   const { data: issues, isLoading } = useQuery({
     queryKey: ["continuity-issues", projectId],
     queryFn: async () => {
-      const res = await api.get<{ issues: ContinuityIssue[] }>(`/v1/continuity/issues?project_id=${projectId}`);
-      return res.issues || [];
+      const res = await api.get<{ items: ContinuityIssue[] }>(`/v1/projects/${projectId}/continuity/issues`);
+      return res.items || [];
     },
   });
 
   const resolveMutation = useMutation({
     mutationFn: async (issueId: string) => {
-      return api.post(`/v1/continuity/issues/${issueId}/resolve`, {
+      return api.post(`/v1/projects/${projectId}/continuity/issues/${issueId}/resolve`, {
         resolution: "Corrected shot brief to match canon wardrobe specification",
       });
     },
@@ -52,7 +53,7 @@ export default function ContinuityCenterPage({ params }: { params: { projectId: 
             <div
               key={issue.id}
               className={`bg-studio-card border rounded-md p-5 space-y-3 transition-all ${
-                issue.is_resolved
+                issue.status === "resolved" || issue.status === "wontfix"
                   ? "border-emerald-500/30 bg-emerald-500/5"
                   : issue.severity === "BLOCKING"
                   ? "border-rose-500/50 bg-rose-500/5"
@@ -78,7 +79,7 @@ export default function ContinuityCenterPage({ params }: { params: { projectId: 
                   >
                     {issue.severity}
                   </span>
-                  {issue.is_resolved ? (
+                  {issue.status === "resolved" || issue.status === "wontfix" ? (
                     <span className="px-2.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 text-xs font-bold border border-emerald-500/20 flex items-center gap-1">
                       <CheckCircle2 className="w-3.5 h-3.5" /> Resolved
                     </span>

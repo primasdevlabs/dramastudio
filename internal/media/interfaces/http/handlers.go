@@ -11,12 +11,14 @@ import (
 
 	"dramastudio/internal/media/application/services"
 	"dramastudio/internal/media/domain"
+	"dramastudio/internal/platform/events"
 	platformhttp "dramastudio/internal/platform/http"
 )
 
 type MediaHandler struct {
 	service        *services.MediaService
-	webhookSecrets map[string][]byte // provider -> HMAC secret
+	webhookSecrets map[string][]byte            // provider -> HMAC secret
+	deliveries     *events.WebhookDeliveryStore // may be nil (in-memory dev)
 }
 
 // NewMediaHandler wires the handler. webhookSecrets maps provider names to
@@ -29,6 +31,12 @@ func NewMediaHandler(service *services.MediaService, webhookSecrets map[string]s
 		secrets[k] = []byte(v)
 	}
 	return &MediaHandler{service: service, webhookSecrets: secrets}
+}
+
+// SetDeliveries injects the durable webhook dedup store (§61). Optional —
+// job terminal-state idempotency still applies when nil.
+func (h *MediaHandler) SetDeliveries(s *events.WebhookDeliveryStore) {
+	h.deliveries = s
 }
 
 func (h *MediaHandler) RegisterRoutes(mux *http.ServeMux) {
@@ -74,6 +82,16 @@ func (r *generateAssetReq) Validate() error {
 	return nil
 }
 
+// verifyAsset confirms assetId belongs to the path project.
+func (h *MediaHandler) verifyAsset(w http.ResponseWriter, r *http.Request) bool {
+	a, err := h.service.GetAsset(r.Context(), r.PathValue("assetId"))
+	if err != nil || a.ProjectID != r.PathValue("projectId") {
+		platformhttp.WriteError(w, http.StatusNotFound, "ASSET_NOT_FOUND", "Asset not found", platformhttp.RequestIDFrom(r), nil)
+		return false
+	}
+	return true
+}
+
 func (h *MediaHandler) listAssets(w http.ResponseWriter, r *http.Request) {
 	assets, err := h.service.ListAssets(r.Context(), r.PathValue("projectId"))
 	if err != nil {
@@ -116,7 +134,7 @@ func (h *MediaHandler) generateAsset(w http.ResponseWriter, r *http.Request) {
 
 func (h *MediaHandler) getAsset(w http.ResponseWriter, r *http.Request) {
 	a, err := h.service.GetAsset(r.Context(), r.PathValue("assetId"))
-	if err != nil {
+	if err != nil || a.ProjectID != r.PathValue("projectId") {
 		platformhttp.WriteError(w, http.StatusNotFound, "ASSET_NOT_FOUND", "Asset not found", platformhttp.RequestIDFrom(r), nil)
 		return
 	}
@@ -136,6 +154,9 @@ func (h *MediaHandler) archiveAsset(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *MediaHandler) assetTransition(w http.ResponseWriter, r *http.Request, fn func(ctx context.Context, id string) (*domain.Asset, error)) {
+	if !h.verifyAsset(w, r) {
+		return
+	}
 	a, err := fn(r.Context(), r.PathValue("assetId"))
 	if err != nil {
 		platformhttp.WriteError(w, http.StatusNotFound, "ASSET_NOT_FOUND", "Asset not found", platformhttp.RequestIDFrom(r), nil)
@@ -145,6 +166,9 @@ func (h *MediaHandler) assetTransition(w http.ResponseWriter, r *http.Request, f
 }
 
 func (h *MediaHandler) regenerateAsset(w http.ResponseWriter, r *http.Request) {
+	if !h.verifyAsset(w, r) {
+		return
+	}
 	job, err := h.service.Regenerate(r.Context(), r.PathValue("assetId"), r.URL.Query().Get("callback_url"))
 	if err != nil {
 		platformhttp.WriteErrorFrom(w, r, err)
@@ -154,6 +178,9 @@ func (h *MediaHandler) regenerateAsset(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *MediaHandler) listVersions(w http.ResponseWriter, r *http.Request) {
+	if !h.verifyAsset(w, r) {
+		return
+	}
 	vs, err := h.service.ListVersions(r.Context(), r.PathValue("assetId"))
 	if err != nil {
 		platformhttp.WriteErrorFrom(w, r, err)
@@ -174,6 +201,7 @@ func (h *MediaHandler) listJobs(w http.ResponseWriter, r *http.Request) {
 // --- Provider webhook ---
 
 type providerCallback struct {
+	DeliveryID    string  `json:"delivery_id"`
 	ProviderJobID string  `json:"provider_job_id"`
 	Status        string  `json:"status"`
 	OutputURL     string  `json:"output_url"`
@@ -201,6 +229,24 @@ func (h *MediaHandler) providerWebhook(w http.ResponseWriter, r *http.Request) {
 	if err := json.Unmarshal(body, &cb); err != nil || cb.ProviderJobID == "" {
 		platformhttp.WriteError(w, http.StatusBadRequest, "INVALID_PAYLOAD", "Malformed callback payload", platformhttp.RequestIDFrom(r), nil)
 		return
+	}
+	// Delivery dedup (§61): provider-supplied delivery ids are recorded
+	// durably; replays of the same delivery are acknowledged but not
+	// re-applied. Terminal-job idempotency backstops missing delivery ids.
+	deliveryID := cb.DeliveryID
+	if deliveryID == "" {
+		deliveryID = r.Header.Get("X-Webhook-Id")
+	}
+	if h.deliveries != nil && deliveryID != "" {
+		first, err := h.deliveries.RecordDelivery(r.Context(), deliveryID, provider, body)
+		if err != nil {
+			platformhttp.WriteError(w, http.StatusInternalServerError, "DELIVERY_STORE_FAILED", "Could not record webhook delivery", platformhttp.RequestIDFrom(r), nil)
+			return
+		}
+		if !first {
+			platformhttp.WriteJSON(w, http.StatusOK, map[string]interface{}{"duplicate": true})
+			return
+		}
 	}
 	job, err := h.service.HandleProviderCallback(r.Context(), cb.ProviderJobID, cb.Status, cb.OutputURL, cb.Error, cb.Cost)
 	if err != nil {

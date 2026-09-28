@@ -10,10 +10,10 @@ export function useContinuityIssues(projectId: string) {
   return useQuery({
     queryKey: continuityKeys.all(projectId),
     queryFn: async () => {
-      const res = await api.get<{ issues: ContinuityIssue[] }>(
-        `/v1/continuity/issues?project_id=${projectId}`
+      const res = await api.get<{ items: ContinuityIssue[] }>(
+        `/v1/projects/${projectId}/continuity/issues`
       );
-      return res.issues ?? [];
+      return res.items ?? [];
     },
     enabled: Boolean(projectId),
   });

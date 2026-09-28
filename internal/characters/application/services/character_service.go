@@ -2,18 +2,26 @@ package services
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/google/uuid"
 
 	"dramastudio/internal/characters/domain"
+	"dramastudio/internal/platform/events"
 )
 
 type CharacterService struct {
-	repo domain.CharacterRepository
+	repo   domain.CharacterRepository
+	events *events.Bus // may be nil; set via SetEvents
 }
 
 func NewCharacterService(repo domain.CharacterRepository) *CharacterService {
 	return &CharacterService{repo: repo}
+}
+
+// SetEvents injects the domain event bus (§48). Nil-safe emitter.
+func (s *CharacterService) SetEvents(b *events.Bus) {
+	s.events = b
 }
 
 func (s *CharacterService) CreateCharacter(ctx context.Context, projectID, name, role, bio string) (*domain.Character, error) {
@@ -22,6 +30,8 @@ func (s *CharacterService) CreateCharacter(ctx context.Context, projectID, name,
 	if err := s.repo.Save(ctx, c); err != nil {
 		return nil, err
 	}
+	s.events.Emit(ctx, events.CharacterCreated, projectID, string(c.ID),
+		fmt.Sprintf("Character %q created (%s)", name, role))
 	return c, nil
 }
 
@@ -50,6 +60,8 @@ func (s *CharacterService) UpdateCharacter(ctx context.Context, id domain.Charac
 	if err := s.repo.Save(ctx, c); err != nil {
 		return nil, err
 	}
+	s.events.Emit(ctx, events.CharacterUpdated, c.ProjectID, string(c.ID),
+		fmt.Sprintf("Character %q updated → v%d", c.Name, c.Version))
 	return c, nil
 }
 
@@ -107,10 +119,16 @@ func (s *CharacterService) ListWardrobe(ctx context.Context, id domain.Character
 
 // Lock freezes the current character version for production use.
 func (s *CharacterService) Lock(ctx context.Context, id domain.CharacterID) error {
-	if _, err := s.repo.FindByID(ctx, id); err != nil {
+	c, err := s.repo.FindByID(ctx, id)
+	if err != nil {
 		return err
 	}
-	return s.repo.SetLocked(ctx, id, true)
+	if err := s.repo.SetLocked(ctx, id, true); err != nil {
+		return err
+	}
+	s.events.Emit(ctx, events.CharacterLocked, c.ProjectID, string(id),
+		fmt.Sprintf("Character %q locked at v%d", c.Name, c.Version))
+	return nil
 }
 
 func (s *CharacterService) Unlock(ctx context.Context, id domain.CharacterID) error {
@@ -118,6 +136,8 @@ func (s *CharacterService) Unlock(ctx context.Context, id domain.CharacterID) er
 }
 
 // AddRelationship records a directional relationship between characters.
+// The target must exist in the same project — dangling cross-project links
+// are rejected.
 func (s *CharacterService) AddRelationship(ctx context.Context, id domain.CharacterID, rel domain.Relationship) (*domain.Character, error) {
 	c, err := s.repo.FindByID(ctx, id)
 	if err != nil {
@@ -125,6 +145,10 @@ func (s *CharacterService) AddRelationship(ctx context.Context, id domain.Charac
 	}
 	if c.IsLocked {
 		return nil, domain.ErrCharacterLocked
+	}
+	target, err := s.repo.FindByID(ctx, rel.TargetCharacterID)
+	if err != nil || target.ProjectID != c.ProjectID {
+		return nil, domain.ErrCharacterNotFound
 	}
 	if err := s.repo.SaveRelationship(ctx, id, &rel); err != nil {
 		return nil, err

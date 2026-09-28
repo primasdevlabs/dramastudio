@@ -11,6 +11,7 @@ import (
 	"dramastudio/internal/media/domain"
 	aicontracts "dramastudio/internal/platform/ai/capability"
 	"dramastudio/internal/platform/ai/routing"
+	"dramastudio/internal/platform/events"
 )
 
 // GenerateRequest is the application-layer input for a generation.
@@ -33,10 +34,16 @@ type GenerateRequest struct {
 type MediaService struct {
 	repo     domain.MediaRepository
 	resolver *routing.Resolver
+	events   *events.Bus // may be nil; set via SetEvents
 }
 
 func NewMediaService(repo domain.MediaRepository, resolver *routing.Resolver) *MediaService {
 	return &MediaService{repo: repo, resolver: resolver}
+}
+
+// SetEvents injects the domain event bus (§48). Nil-safe emitter.
+func (s *MediaService) SetEvents(b *events.Bus) {
+	s.events = b
 }
 
 // Generate submits a generation to the resolved provider. Sync providers
@@ -73,6 +80,8 @@ func (s *MediaService) Generate(ctx context.Context, req GenerateRequest) (*doma
 	if err := s.repo.SaveAsset(ctx, asset); err != nil {
 		return nil, nil, err
 	}
+	s.events.Emit(ctx, events.GenerationStarted, req.ProjectID, asset.ID,
+		fmt.Sprintf("%s generation started (%s)", req.Capability, primary.ProviderID))
 
 	job, err := s.submitJob(ctx, asset, req.Capability, req.Prompt, req.Parameters, req.Spec, res, req.CallbackURL)
 	if err != nil {
@@ -234,6 +243,8 @@ func (s *MediaService) completeJob(ctx context.Context, job *domain.GenerationJo
 	}
 	_ = s.repo.SaveAssetVersion(ctx, v)
 	_ = s.repo.SaveAsset(ctx, asset)
+	s.events.Emit(ctx, events.AssetGenerated, asset.ProjectID, asset.ID,
+		fmt.Sprintf("%s asset generated (v%d)", asset.Type, asset.Version))
 }
 
 // HandleProviderCallback applies a verified provider webhook/poll result
@@ -242,6 +253,12 @@ func (s *MediaService) HandleProviderCallback(ctx context.Context, providerJobID
 	job, err := s.repo.FindJobByProviderJobID(ctx, providerJobID)
 	if err != nil {
 		return nil, err
+	}
+	// Terminal jobs make callbacks idempotent — provider retries/webhook
+	// replays must not double-count cost or append versions (§61).
+	switch job.Status {
+	case domain.GenerationSucceeded, domain.GenerationFailed, domain.GenerationCancelled:
+		return job, nil
 	}
 	asset, err := s.repo.FindAssetByID(ctx, job.AssetID)
 	if err != nil {
@@ -288,6 +305,12 @@ func (s *MediaService) setAssetStatus(ctx context.Context, id string, next domai
 	}
 	if err := s.repo.SaveAsset(ctx, a); err != nil {
 		return nil, err
+	}
+	switch next {
+	case domain.AssetApproved:
+		s.events.Emit(ctx, events.AssetApproved, a.ProjectID, a.ID, "Asset approved")
+	case domain.AssetRejected:
+		s.events.Emit(ctx, events.AssetRejected, a.ProjectID, a.ID, "Asset rejected")
 	}
 	return a, nil
 }

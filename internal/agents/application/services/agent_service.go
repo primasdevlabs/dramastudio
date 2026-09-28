@@ -2,21 +2,29 @@ package services
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/google/uuid"
 
 	"dramastudio/internal/agents/director"
 	"dramastudio/internal/agents/domain"
+	"dramastudio/internal/platform/events"
 )
 
 type AgentService struct {
 	repo         domain.AgentRepository
 	leadDirector *director.LeadDirector
+	events       *events.Bus // may be nil; set via SetEvents
 }
 
 func NewAgentService(repo domain.AgentRepository, ld *director.LeadDirector) *AgentService {
 	return &AgentService{repo: repo, leadDirector: ld}
+}
+
+// SetEvents injects the domain event bus (§48). Nil-safe emitter.
+func (s *AgentService) SetEvents(b *events.Bus) {
+	s.events = b
 }
 
 // --- Definitions ---
@@ -56,6 +64,8 @@ func (s *AgentService) CreateTask(ctx context.Context, t *domain.Task) (*domain.
 	if err := s.repo.SaveTask(ctx, t); err != nil {
 		return nil, err
 	}
+	s.events.Emit(ctx, events.AgentTaskCreated, t.ProjectID, t.ID,
+		fmt.Sprintf("Agent task created: %s", t.Objective))
 	return t, nil
 }
 
@@ -106,15 +116,25 @@ func (s *AgentService) EscalateTask(ctx context.Context, id, reason string) (*do
 
 // CompleteTask records a task result.
 func (s *AgentService) CompleteTask(ctx context.Context, id string, result map[string]interface{}) (*domain.Task, error) {
-	return s.transitionTask(ctx, id, domain.TaskSucceeded, func(t *domain.Task) {
+	t, err := s.transitionTask(ctx, id, domain.TaskSucceeded, func(t *domain.Task) {
 		t.Result = result
 	})
+	if err == nil {
+		s.events.Emit(ctx, events.AgentTaskCompleted, t.ProjectID, t.ID,
+			fmt.Sprintf("Agent task completed: %s", t.Objective))
+	}
+	return t, err
 }
 
 func (s *AgentService) FailTask(ctx context.Context, id, errMsg string) (*domain.Task, error) {
-	return s.transitionTask(ctx, id, domain.TaskFailed, func(t *domain.Task) {
+	t, err := s.transitionTask(ctx, id, domain.TaskFailed, func(t *domain.Task) {
 		t.Error = errMsg
 	})
+	if err == nil {
+		s.events.Emit(ctx, events.AgentTaskFailed, t.ProjectID, t.ID,
+			fmt.Sprintf("Agent task failed: %s", errMsg))
+	}
+	return t, err
 }
 
 // RetryTask re-queues a failed or escalated task (human control: retry).
@@ -138,6 +158,8 @@ func (s *AgentService) RunDirectorStep(ctx context.Context, projectID, episodeID
 	if err := s.repo.SaveDecision(ctx, dec); err != nil {
 		return nil, err
 	}
+	s.events.Emit(ctx, events.AgentDecisionMade, projectID, dec.ID,
+		fmt.Sprintf("Lead Director decision: %s", dec.Decision))
 	return dec, nil
 }
 

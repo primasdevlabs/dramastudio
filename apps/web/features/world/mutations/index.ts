@@ -7,14 +7,14 @@ interface CreateLocationInput {
   project_id: string;
   name: string;
   description: string;
-  type: string;
+  kind: string;
 }
 
 export function useCreateLocation() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (input: CreateLocationInput) =>
-      api.post<Location>("/v1/world/locations", input),
+    mutationFn: ({ project_id, ...data }: CreateLocationInput) =>
+      api.post<Location>(`/v1/projects/${project_id}/world/locations`, data),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({
         queryKey: worldKeys.locations(variables.project_id),

@@ -47,6 +47,10 @@ func (b *SSEBroker) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		WriteError(w, http.StatusInternalServerError, "SSE_UNSUPPORTED", "Streaming unsupported", RequestIDFrom(r), nil)
 		return
 	}
+	// The server's absolute WriteTimeout would kill the long-lived stream;
+	// reset the write deadline so the connection stays open indefinitely.
+	_ = http.NewResponseController(w).SetWriteDeadline(time.Time{})
+
 	w.Header().Set("Content-Type", "text/event-stream")
 	w.Header().Set("Cache-Control", "no-cache")
 	w.Header().Set("Connection", "keep-alive")

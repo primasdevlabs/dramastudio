@@ -1,6 +1,7 @@
 package http
 
 import (
+	"context"
 	"net/http"
 	"time"
 
@@ -10,11 +11,18 @@ import (
 )
 
 type PublishingHandler struct {
-	service *services.PublishingService
+	service         *services.PublishingService
+	episodeResolver func(ctx context.Context, episodeID string) (string, error)
 }
 
 func NewPublishingHandler(service *services.PublishingService) *PublishingHandler {
 	return &PublishingHandler{service: service}
+}
+
+// SetEpisodeResolver injects the episode → project ownership check for
+// body-scoped episode_id params (schedulePublication).
+func (h *PublishingHandler) SetEpisodeResolver(fn func(ctx context.Context, episodeID string) (string, error)) {
+	h.episodeResolver = fn
 }
 
 func (h *PublishingHandler) RegisterRoutes(mux *http.ServeMux) {
@@ -110,6 +118,13 @@ func (h *PublishingHandler) schedulePublication(w http.ResponseWriter, r *http.R
 	if !platformhttp.DecodeAndValidate(w, r, &req) {
 		return
 	}
+	if h.episodeResolver != nil {
+		owner, err := h.episodeResolver(r.Context(), req.EpisodeID)
+		if err != nil || owner != r.PathValue("projectId") {
+			platformhttp.WriteError(w, http.StatusNotFound, "EPISODE_NOT_FOUND", "Episode not found in project", platformhttp.RequestIDFrom(r), nil)
+			return
+		}
+	}
 	pub, err := h.service.SchedulePublication(r.Context(), r.PathValue("projectId"),
 		req.EpisodeID, req.ChannelID, req.VideoURL, req.Metadata, req.ScheduledAt,
 		platformhttp.IdempotencyKey(r))
@@ -122,7 +137,7 @@ func (h *PublishingHandler) schedulePublication(w http.ResponseWriter, r *http.R
 
 func (h *PublishingHandler) getPublication(w http.ResponseWriter, r *http.Request) {
 	pub, err := h.service.GetPublication(r.Context(), r.PathValue("publicationId"))
-	if err != nil {
+	if err != nil || pub.ProjectID != r.PathValue("projectId") {
 		platformhttp.WriteError(w, http.StatusNotFound, "PUBLICATION_NOT_FOUND", "Publication not found", platformhttp.RequestIDFrom(r), nil)
 		return
 	}
@@ -130,7 +145,12 @@ func (h *PublishingHandler) getPublication(w http.ResponseWriter, r *http.Reques
 }
 
 func (h *PublishingHandler) publish(w http.ResponseWriter, r *http.Request) {
-	pub, err := h.service.Publish(r.Context(), r.PathValue("publicationId"))
+	pub, err := h.service.GetPublication(r.Context(), r.PathValue("publicationId"))
+	if err != nil || pub.ProjectID != r.PathValue("projectId") {
+		platformhttp.WriteError(w, http.StatusNotFound, "PUBLICATION_NOT_FOUND", "Publication not found", platformhttp.RequestIDFrom(r), nil)
+		return
+	}
+	pub, err = h.service.Publish(r.Context(), pub.ID)
 	if err != nil {
 		if err == domain.ErrInvalidTransition {
 			platformhttp.WriteError(w, http.StatusConflict, "INVALID_TRANSITION", err.Error(), platformhttp.RequestIDFrom(r), nil)

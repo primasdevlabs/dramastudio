@@ -2,10 +2,13 @@ package services
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/google/uuid"
 
+	"dramastudio/internal/platform/audit"
+	"dramastudio/internal/platform/events"
 	"dramastudio/internal/platform/workflow/contracts"
 	"dramastudio/internal/production/domain"
 )
@@ -13,10 +16,17 @@ import (
 type ProductionService struct {
 	repo   domain.ProductionRepository
 	engine contracts.Engine // may be nil; set via SetEngine
+	events *events.Bus      // may be nil; set via SetEvents
+	audit  audit.Logger     // may be nil; set via SetAudit
 }
 
 func NewProductionService(repo domain.ProductionRepository) *ProductionService {
 	return &ProductionService{repo: repo}
+}
+
+// SetAudit injects the append-only audit logger (§63).
+func (s *ProductionService) SetAudit(l audit.Logger) {
+	s.audit = l
 }
 
 // SetEngine injects the workflow engine port (§83). Called by the
@@ -24,6 +34,12 @@ func NewProductionService(repo domain.ProductionRepository) *ProductionService {
 // (the engine's activities depend on this service).
 func (s *ProductionService) SetEngine(e contracts.Engine) {
 	s.engine = e
+}
+
+// SetEvents injects the domain event bus (§48). Nil-safe: services emit
+// events only when a bus is wired.
+func (s *ProductionService) SetEvents(b *events.Bus) {
+	s.events = b
 }
 
 // signalRun delivers a control signal to the run's workflow when an
@@ -90,6 +106,8 @@ func (s *ProductionService) StartRun(ctx context.Context, projectID, episodeID s
 			return nil, err
 		}
 	}
+	s.events.Emit(ctx, events.ProductionRunStarted, projectID, run.ID,
+		fmt.Sprintf("Production run started for episode %s", episodeID))
 	return run, nil
 }
 
@@ -142,6 +160,7 @@ func (s *ProductionService) PauseRun(ctx context.Context, runID string) (*domain
 	run, err := s.transitionRun(ctx, runID, domain.RunStatusPaused)
 	if err == nil {
 		s.signalRun(ctx, runID, contracts.SignalPause, "")
+		s.events.Emit(ctx, events.ProductionRunPaused, run.ProjectID, runID, "Production run paused")
 	}
 	return run, err
 }
@@ -150,6 +169,7 @@ func (s *ProductionService) ResumeRun(ctx context.Context, runID string) (*domai
 	run, err := s.transitionRun(ctx, runID, domain.RunStatusRunning)
 	if err == nil {
 		s.signalRun(ctx, runID, contracts.SignalResume, "")
+		s.events.Emit(ctx, events.ProductionRunResumed, run.ProjectID, runID, "Production run resumed")
 	}
 	return run, err
 }
@@ -158,6 +178,7 @@ func (s *ProductionService) StopRun(ctx context.Context, runID string) (*domain.
 	run, err := s.transitionRun(ctx, runID, domain.RunStatusStopped)
 	if err == nil {
 		s.signalRun(ctx, runID, contracts.SignalStop, "")
+		s.events.Emit(ctx, events.ProductionRunStopped, run.ProjectID, runID, "Production run stopped")
 	}
 	return run, err
 }
@@ -182,15 +203,21 @@ func (s *ProductionService) CreateJob(ctx context.Context, job *domain.Productio
 	if err := s.repo.SaveJob(ctx, job); err != nil {
 		return nil, err
 	}
+	s.events.Emit(ctx, events.ProductionJobCreated, job.ProjectID, job.ID,
+		fmt.Sprintf("Production job %s created", job.Kind))
 	return job, nil
+}
+
+func (s *ProductionService) ListJobs(ctx context.Context, projectID string) ([]*domain.ProductionJob, error) {
+	return s.repo.ListJobsByProject(ctx, projectID)
 }
 
 func (s *ProductionService) GetJob(ctx context.Context, id string) (*domain.ProductionJob, error) {
 	return s.repo.FindJobByID(ctx, id)
 }
 
-func (s *ProductionService) ListJobs(ctx context.Context, projectID string) ([]*domain.ProductionJob, error) {
-	return s.repo.ListJobsByProject(ctx, projectID)
+func (s *ProductionService) GetApproval(ctx context.Context, id string) (*domain.ApprovalRequest, error) {
+	return s.repo.FindApprovalByID(ctx, id)
 }
 
 // CompleteJob records a job's result URL (called by workers/webhooks).
@@ -203,7 +230,12 @@ func (s *ProductionService) CompleteJob(ctx context.Context, id, resultURL strin
 	j.Status = domain.JobStatusCompleted
 	j.ResultURL = resultURL
 	j.CompletedAt = &now
-	return s.repo.SaveJob(ctx, j)
+	if err := s.repo.SaveJob(ctx, j); err != nil {
+		return err
+	}
+	s.events.Emit(ctx, events.ProductionJobCompleted, j.ProjectID, j.ID,
+		fmt.Sprintf("Job %s completed", j.Kind))
+	return nil
 }
 
 func (s *ProductionService) FailJob(ctx context.Context, id, errMsg string) error {
@@ -215,7 +247,12 @@ func (s *ProductionService) FailJob(ctx context.Context, id, errMsg string) erro
 	j.Status = domain.JobStatusFailed
 	j.Error = errMsg
 	j.CompletedAt = &now
-	return s.repo.SaveJob(ctx, j)
+	if err := s.repo.SaveJob(ctx, j); err != nil {
+		return err
+	}
+	s.events.Emit(ctx, events.ProductionJobFailed, j.ProjectID, j.ID,
+		fmt.Sprintf("Job %s failed: %s", j.Kind, errMsg))
+	return nil
 }
 
 // RetryJob re-queues a failed job (human control: retry).
@@ -260,8 +297,8 @@ func (s *ProductionService) UpdateShot(ctx context.Context, shot *domain.Shot) (
 	return shot, nil
 }
 
-func (s *ProductionService) ListShots(ctx context.Context, episodeID, sceneID string) ([]*domain.Shot, error) {
-	return s.repo.ListShots(ctx, episodeID, sceneID)
+func (s *ProductionService) ListShots(ctx context.Context, projectID, episodeID, sceneID string) ([]*domain.Shot, error) {
+	return s.repo.ListShots(ctx, projectID, episodeID, sceneID)
 }
 
 func (s *ProductionService) SetShotStatus(ctx context.Context, id string, status domain.ShotStatus) (*domain.Shot, error) {
@@ -305,6 +342,8 @@ func (s *ProductionService) RequestApproval(ctx context.Context, projectID, epis
 	if err := s.repo.SaveApproval(ctx, req); err != nil {
 		return nil, err
 	}
+	s.events.Emit(ctx, events.ApprovalRequested, projectID, req.ID,
+		fmt.Sprintf("Approval requested for %s", stage))
 	return req, nil
 }
 
@@ -328,6 +367,17 @@ func (s *ProductionService) Decide(ctx context.Context, approvalID string, decis
 	}
 	// Forward the decision to any workflow waiting at an approval gate.
 	s.signalApproval(ctx, a, decision)
+	ev := events.ApprovalGranted
+	if decision == domain.DecisionReject || decision == domain.DecisionStop {
+		ev = events.ApprovalRejected
+	}
+	s.events.Emit(ctx, ev, a.ProjectID, a.ID,
+		fmt.Sprintf("Approval %s: %s", a.Stage, decision))
+	audit.Record(s.audit, ctx, audit.Entry{
+		Actor: decidedBy, ActorKind: audit.ActorUser, Action: "approval.decide",
+		EntityType: "approval", EntityID: a.ID, ProjectID: a.ProjectID,
+		Detail: map[string]interface{}{"decision": string(decision), "stage": a.Stage},
+	})
 	return a, nil
 }
 

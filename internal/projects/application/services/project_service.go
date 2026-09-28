@@ -6,15 +6,22 @@ import (
 
 	"github.com/google/uuid"
 
+	"dramastudio/internal/platform/events"
 	"dramastudio/internal/projects/domain"
 )
 
 type ProjectService struct {
-	repo domain.ProjectRepository
+	repo   domain.ProjectRepository
+	events *events.Bus // may be nil; set via SetEvents
 }
 
 func NewProjectService(repo domain.ProjectRepository) *ProjectService {
 	return &ProjectService{repo: repo}
+}
+
+// SetEvents injects the domain event bus (§48). Nil-safe emitter.
+func (s *ProjectService) SetEvents(b *events.Bus) {
+	s.events = b
 }
 
 func (s *ProjectService) CreateProject(ctx context.Context, orgID, name, description, genre, language string, mode domain.ProductionMode) (*domain.Project, error) {
@@ -23,6 +30,8 @@ func (s *ProjectService) CreateProject(ctx context.Context, orgID, name, descrip
 	if err := s.repo.Save(ctx, project); err != nil {
 		return nil, err
 	}
+	s.events.Emit(ctx, events.ProjectCreated, string(id), string(id),
+		fmt.Sprintf("Project %q created", name))
 	return project, nil
 }
 
@@ -51,9 +60,14 @@ func (s *ProjectService) UpdateProject(ctx context.Context, id domain.ProjectID,
 
 // TransitionStatus moves the project through the §32 state machine.
 func (s *ProjectService) TransitionStatus(ctx context.Context, id domain.ProjectID, to domain.ProjectStatus) (*domain.Project, error) {
-	return s.UpdateProject(ctx, id, func(p *domain.Project) error {
+	p, err := s.UpdateProject(ctx, id, func(p *domain.Project) error {
 		return p.Transition(to)
 	})
+	if err == nil {
+		s.events.Emit(ctx, events.ProjectUpdated, string(id), string(id),
+			fmt.Sprintf("Project status → %s", to))
+	}
+	return p, err
 }
 
 // RecordSpend adds provider cost to the project budget; callers should have
@@ -100,6 +114,8 @@ func (s *ProjectService) SaveSeriesBible(ctx context.Context, projectID domain.P
 	if err := s.repo.SaveBible(ctx, bible); err != nil {
 		return nil, err
 	}
+	s.events.Emit(ctx, events.BibleUpdated, string(projectID), id,
+		fmt.Sprintf("Series bible v%d saved", version))
 	return bible, nil
 }
 

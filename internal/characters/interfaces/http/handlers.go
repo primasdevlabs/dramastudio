@@ -31,6 +31,17 @@ func (h *CharactersHandler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /v1/projects/{projectId}/characters/{characterId}/wardrobe", h.listWardrobe)
 }
 
+// verifyCharacter confirms characterId belongs to the path project —
+// prevents hierarchy-confusion access to another project's characters.
+func (h *CharactersHandler) verifyCharacter(w http.ResponseWriter, r *http.Request) (*domain.Character, bool) {
+	c, err := h.service.GetCharacter(r.Context(), domain.CharacterID(r.PathValue("characterId")))
+	if err != nil || c.ProjectID != r.PathValue("projectId") {
+		platformhttp.WriteError(w, http.StatusNotFound, "CHARACTER_NOT_FOUND", "Character not found", platformhttp.RequestIDFrom(r), nil)
+		return nil, false
+	}
+	return c, true
+}
+
 func (h *CharactersHandler) list(w http.ResponseWriter, r *http.Request) {
 	chars, err := h.service.ListCharacters(r.Context(), r.PathValue("projectId"))
 	if err != nil {
@@ -58,15 +69,17 @@ func (h *CharactersHandler) create(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *CharactersHandler) get(w http.ResponseWriter, r *http.Request) {
-	c, err := h.service.GetCharacter(r.Context(), domain.CharacterID(r.PathValue("characterId")))
-	if err != nil {
-		platformhttp.WriteError(w, http.StatusNotFound, "CHARACTER_NOT_FOUND", "Character not found", platformhttp.RequestIDFrom(r), nil)
+	c, ok := h.verifyCharacter(w, r)
+	if !ok {
 		return
 	}
 	platformhttp.WriteJSON(w, http.StatusOK, toCharacterResponse(c))
 }
 
 func (h *CharactersHandler) update(w http.ResponseWriter, r *http.Request) {
+	if _, ok := h.verifyCharacter(w, r); !ok {
+		return
+	}
 	id := domain.CharacterID(r.PathValue("characterId"))
 	var req updateCharacterReq
 	if !platformhttp.DecodeAndValidate(w, r, &req) {
@@ -111,6 +124,9 @@ func (h *CharactersHandler) update(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *CharactersHandler) lock(w http.ResponseWriter, r *http.Request) {
+	if _, ok := h.verifyCharacter(w, r); !ok {
+		return
+	}
 	if err := h.service.Lock(r.Context(), domain.CharacterID(r.PathValue("characterId"))); err != nil {
 		platformhttp.WriteError(w, http.StatusNotFound, "CHARACTER_NOT_FOUND", "Character not found", platformhttp.RequestIDFrom(r), nil)
 		return
@@ -119,6 +135,9 @@ func (h *CharactersHandler) lock(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *CharactersHandler) unlock(w http.ResponseWriter, r *http.Request) {
+	if _, ok := h.verifyCharacter(w, r); !ok {
+		return
+	}
 	if err := h.service.Unlock(r.Context(), domain.CharacterID(r.PathValue("characterId"))); err != nil {
 		platformhttp.WriteError(w, http.StatusNotFound, "CHARACTER_NOT_FOUND", "Character not found", platformhttp.RequestIDFrom(r), nil)
 		return
@@ -127,6 +146,9 @@ func (h *CharactersHandler) unlock(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *CharactersHandler) addRelationship(w http.ResponseWriter, r *http.Request) {
+	if _, ok := h.verifyCharacter(w, r); !ok {
+		return
+	}
 	var req relationshipReq
 	if !platformhttp.DecodeAndValidate(w, r, &req) {
 		return
@@ -144,6 +166,9 @@ func (h *CharactersHandler) addRelationship(w http.ResponseWriter, r *http.Reque
 }
 
 func (h *CharactersHandler) listVersions(w http.ResponseWriter, r *http.Request) {
+	if _, ok := h.verifyCharacter(w, r); !ok {
+		return
+	}
 	vs, err := h.service.ListVersions(r.Context(), domain.CharacterID(r.PathValue("characterId")))
 	if err != nil {
 		platformhttp.WriteErrorFrom(w, r, err)
@@ -153,7 +178,14 @@ func (h *CharactersHandler) listVersions(w http.ResponseWriter, r *http.Request)
 }
 
 func (h *CharactersHandler) getVersion(w http.ResponseWriter, r *http.Request) {
-	v, _ := strconv.Atoi(r.PathValue("version"))
+	if _, ok := h.verifyCharacter(w, r); !ok {
+		return
+	}
+	v, err := strconv.Atoi(r.PathValue("version"))
+	if err != nil || v < 1 {
+		platformhttp.WriteError(w, http.StatusBadRequest, "INVALID_VERSION", "Version must be a positive integer", platformhttp.RequestIDFrom(r), nil)
+		return
+	}
 	cv, err := h.service.GetVersion(r.Context(), domain.CharacterID(r.PathValue("characterId")), v)
 	if err != nil {
 		platformhttp.WriteError(w, http.StatusNotFound, "VERSION_NOT_FOUND", "Character version not found", platformhttp.RequestIDFrom(r), nil)
@@ -163,6 +195,9 @@ func (h *CharactersHandler) getVersion(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *CharactersHandler) assignWardrobe(w http.ResponseWriter, r *http.Request) {
+	if _, ok := h.verifyCharacter(w, r); !ok {
+		return
+	}
 	var req wardrobeReq
 	if !platformhttp.DecodeAndValidate(w, r, &req) {
 		return
@@ -177,6 +212,9 @@ func (h *CharactersHandler) assignWardrobe(w http.ResponseWriter, r *http.Reques
 }
 
 func (h *CharactersHandler) listWardrobe(w http.ResponseWriter, r *http.Request) {
+	if _, ok := h.verifyCharacter(w, r); !ok {
+		return
+	}
 	episodeID := r.URL.Query().Get("episode_id")
 	items, err := h.service.ListWardrobe(r.Context(), domain.CharacterID(r.PathValue("characterId")), episodeID)
 	if err != nil {

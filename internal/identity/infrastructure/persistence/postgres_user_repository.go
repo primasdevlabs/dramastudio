@@ -33,24 +33,32 @@ func (r *PostgresUserRepository) SaveUser(ctx context.Context, u *domain.User) e
 
 func (r *PostgresUserRepository) FindUserByID(ctx context.Context, id string) (*domain.User, error) {
 	row := r.q.QueryRow(ctx, `
-		SELECT id, org_id, email, display_name, password_hash, created_at
-		FROM identity.users WHERE id = $1`, id)
+		SELECT u.id, u.org_id, u.email, u.display_name, u.password_hash, u.created_at,
+		       COALESCE(m.role, '')
+		FROM identity.users u
+		LEFT JOIN identity.memberships m ON m.user_id = u.id AND m.org_id = u.org_id
+		WHERE u.id = $1`, id)
 	return scanUser(row)
 }
 
 func (r *PostgresUserRepository) FindUserByEmail(ctx context.Context, email string) (*domain.User, error) {
 	row := r.q.QueryRow(ctx, `
-		SELECT id, org_id, email, display_name, password_hash, created_at
-		FROM identity.users WHERE email = $1`, email)
+		SELECT u.id, u.org_id, u.email, u.display_name, u.password_hash, u.created_at,
+		       COALESCE(m.role, '')
+		FROM identity.users u
+		LEFT JOIN identity.memberships m ON m.user_id = u.id AND m.org_id = u.org_id
+		WHERE u.email = $1`, email)
 	return scanUser(row)
 }
 
 func (r *PostgresUserRepository) ListUsers(ctx context.Context, orgID string) ([]*domain.User, error) {
 	rows, err := r.q.Query(ctx, `
-		SELECT id, org_id, email, display_name, password_hash, created_at
-		FROM identity.users
-		WHERE $1 = '' OR org_id = $1
-		ORDER BY created_at`, orgID)
+		SELECT u.id, u.org_id, u.email, u.display_name, u.password_hash, u.created_at,
+		       COALESCE(m.role, '')
+		FROM identity.users u
+		LEFT JOIN identity.memberships m ON m.user_id = u.id AND m.org_id = u.org_id
+		WHERE $1 = '' OR u.org_id = $1
+		ORDER BY u.created_at`, orgID)
 	if err != nil {
 		return nil, err
 	}
@@ -81,6 +89,28 @@ func (r *PostgresUserRepository) FindOrganizationByID(ctx context.Context, id st
 		return nil, domain.ErrOrgNotFound
 	}
 	return &o, err
+}
+
+// SaveMembership upserts the user↔org role binding (§8).
+func (r *PostgresUserRepository) SaveMembership(ctx context.Context, m *domain.Membership) error {
+	_, err := r.q.Exec(ctx, `
+		INSERT INTO identity.memberships (user_id, org_id, role)
+		VALUES ($1, $2, $3)
+		ON CONFLICT (user_id, org_id) DO UPDATE SET role = EXCLUDED.role`,
+		m.UserID, m.OrganizationID, m.Role)
+	return err
+}
+
+// FindMembershipRole returns the member's role or "" for non-members.
+func (r *PostgresUserRepository) FindMembershipRole(ctx context.Context, userID, orgID string) (string, error) {
+	var role string
+	err := r.q.QueryRow(ctx,
+		`SELECT role FROM identity.memberships WHERE user_id = $1 AND org_id = $2`,
+		userID, orgID).Scan(&role)
+	if postgres.IsNoRows(err) {
+		return "", nil
+	}
+	return role, err
 }
 
 func (r *PostgresUserRepository) SaveCredential(ctx context.Context, c *domain.APICredential) error {
@@ -150,7 +180,7 @@ type rowScanner interface {
 
 func scanUser(row rowScanner) (*domain.User, error) {
 	var u domain.User
-	err := row.Scan(&u.ID, &u.OrgID, &u.Email, &u.Name, &u.PasswordHash, &u.CreatedAt)
+	err := row.Scan(&u.ID, &u.OrgID, &u.Email, &u.Name, &u.PasswordHash, &u.CreatedAt, &u.Role)
 	if postgres.IsNoRows(err) {
 		return nil, domain.ErrUserNotFound
 	}
@@ -178,4 +208,33 @@ func scanCredential(row rowScanner) (*domain.APICredential, error) {
 		c.Permissions = []string{}
 	}
 	return &c, nil
+}
+
+func (r *PostgresUserRepository) SaveResetToken(ctx context.Context, userID, tokenHash string, expiresAt time.Time) error {
+	_, err := r.q.Exec(ctx, `
+		INSERT INTO identity.password_reset_tokens (token_hash, user_id, expires_at)
+		VALUES ($1, $2, $3)
+		ON CONFLICT (token_hash) DO NOTHING`, tokenHash, userID, expiresAt)
+	return err
+}
+
+func (r *PostgresUserRepository) FindUserByResetToken(ctx context.Context, tokenHash string) (*domain.User, error) {
+	// Expiry is compared against a Go-bound timestamp rather than now() so the
+	// check behaves identically under the sqlite dialect translation.
+	row := r.q.QueryRow(ctx, `
+		SELECT u.id, u.org_id, u.email, u.display_name, u.password_hash, u.created_at,
+		       COALESCE(m.role, '')
+		FROM identity.password_reset_tokens t
+		JOIN identity.users u ON u.id = t.user_id
+		LEFT JOIN identity.memberships m ON m.user_id = u.id AND m.org_id = u.org_id
+		WHERE t.token_hash = $1 AND t.used_at IS NULL AND t.expires_at > $2`,
+		tokenHash, time.Now().UTC())
+	return scanUser(row)
+}
+
+func (r *PostgresUserRepository) ConsumeResetToken(ctx context.Context, tokenHash string) error {
+	_, err := r.q.Exec(ctx, `
+		UPDATE identity.password_reset_tokens SET used_at = now()
+		WHERE token_hash = $1 AND used_at IS NULL`, tokenHash)
+	return err
 }

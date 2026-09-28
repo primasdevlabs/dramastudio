@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useParams } from "next/navigation";
 import {
   Share2,
   Send,
@@ -46,9 +47,11 @@ import {
 } from "@mantine/core";
 import { useSettingsStore } from "@/stores/settings-store";
 import type { PublishingPlan, PublishingPlanChannelItem } from "@/lib/api/settings-types";
+import { api } from "@/lib/api/client";
+import type { Channel, Publication, Season, Episode } from "@/lib/api/types";
 
-export default function PublishingPage({ params }: { params: { projectId: string } }) {
-  const { projectId } = params;
+export default function PublishingPage() {
+  const { projectId } = useParams<{ projectId: string }>();
   const queryClient = useQueryClient();
   const { getEffectiveSettings } = useSettingsStore();
   const effectiveSettings = getEffectiveSettings(projectId);
@@ -62,33 +65,110 @@ export default function PublishingPage({ params }: { params: { projectId: string
   // Failure Detail Modal state
   const [failureDetail, setFailureDetail] = useState<{ channel: string; reason: string } | null>(null);
 
-  // Sample publishing plans for episodes
-  const [plans, setPlans] = useState<PublishingPlan[]>([
-    {
-      id: "plan-001",
-      episodeId: "ep-12",
-      episodeTitle: "Episode 12: Midnight Revelation",
-      scheduledTime: "Today 18:00 EST",
-      channels: [
-        { channelId: "facebook", channelName: "Facebook", enabled: true, format: "Video (16:9)", publicationTime: "Immediately", status: "scheduled" },
-        { channelId: "instagram", channelName: "Instagram", enabled: true, format: "Reel (9:16)", publicationTime: "Immediately", status: "scheduled" },
-        { channelId: "tiktok", channelName: "TikTok", enabled: true, format: "Video (9:16)", publicationTime: "18:30 EST", status: "scheduled" },
-        { channelId: "youtube", channelName: "YouTube", enabled: true, format: "Shorts (9:16)", publicationTime: "19:00 EST", status: "scheduled" },
-      ],
+  const { data: channels } = useQuery({
+    queryKey: ["channels", projectId],
+    queryFn: async () => {
+      const res = await api.get<{ items: Channel[] }>(
+        `/v1/projects/${projectId}/publishing/channels`
+      );
+      return res.items ?? [];
     },
-    {
-      id: "plan-002",
-      episodeId: "ep-11",
-      episodeTitle: "Episode 11: Dark Waters",
-      scheduledTime: "Yesterday 18:00 EST",
-      channels: [
-        { channelId: "facebook", channelName: "Facebook", enabled: true, format: "Video (16:9)", publicationTime: "Yesterday", status: "published" },
-        { channelId: "instagram", channelName: "Instagram", enabled: true, format: "Reel (9:16)", publicationTime: "Yesterday", status: "published" },
-        { channelId: "tiktok", channelName: "TikTok", enabled: true, format: "Video (9:16)", publicationTime: "Yesterday", status: "failed", failureReason: "Provider rejected the video format. Requires vertical 9:16 aspect ratio." },
-        { channelId: "youtube", channelName: "YouTube", enabled: true, format: "Full Episode (16:9)", publicationTime: "Yesterday", status: "published" },
-      ],
+    enabled: Boolean(projectId),
+  });
+
+  const { data: publications } = useQuery({
+    queryKey: ["publications", projectId],
+    queryFn: async () => {
+      const res = await api.get<{ items: Publication[] }>(
+        `/v1/projects/${projectId}/publishing/publications`
+      );
+      return res.items ?? [];
     },
-  ]);
+    enabled: Boolean(projectId),
+  });
+
+  const { data: seasons } = useQuery({
+    queryKey: ["seasons", projectId],
+    queryFn: async () => {
+      const res = await api.get<{ items: Season[] }>(
+        `/v1/projects/${projectId}/seasons`
+      );
+      return res.items ?? [];
+    },
+    enabled: Boolean(projectId),
+  });
+
+  const { data: episodes } = useQuery({
+    queryKey: ["project-episodes", projectId, (seasons || []).map((s) => s.id).join(",")],
+    queryFn: async () => {
+      const all: Episode[] = [];
+      for (const s of seasons || []) {
+        const res = await api.get<{ items: Episode[] }>(
+          `/v1/projects/${projectId}/seasons/${s.id}/episodes`
+        );
+        all.push(...(res.items || []));
+      }
+      return all;
+    },
+    enabled: Boolean(projectId && seasons && seasons.length > 0),
+  });
+
+  const episodeTitle = (id: string) => {
+    const ep = (episodes || []).find((e) => e.id === id);
+    return ep ? `E${String(ep.number).padStart(2, "0")} — ${ep.title}` : id;
+  };
+
+  // Group real publications into per-episode plans; connected channels not
+  // yet scheduled for that episode appear disabled.
+  const plans: PublishingPlan[] = [];
+  const byEpisode = new Map<string, Publication[]>();
+  for (const pub of publications ?? []) {
+    byEpisode.set(pub.episode_id, [...(byEpisode.get(pub.episode_id) ?? []), pub]);
+  }
+  for (const [episodeId, pubs] of byEpisode) {
+    const scheduled = pubs.find((p) => p.scheduled_at)?.scheduled_at;
+    plans.push({
+      id: `plan-${episodeId}`,
+      episodeId,
+      episodeTitle: episodeTitle(episodeId),
+      scheduledTime: scheduled ? new Date(scheduled).toLocaleString() : "Immediately",
+      channels: (channels ?? []).map((ch) => {
+        const pub = pubs.find((p) => p.channel_id === ch.id);
+        return {
+          channelId: ch.id,
+          channelName: ch.name || ch.platform,
+          enabled: Boolean(pub),
+          format: pub?.metadata?.title ?? "Video",
+          publicationTime: pub?.scheduled_at
+            ? new Date(pub.scheduled_at).toLocaleString()
+            : "Immediately",
+          status: (pub?.status ?? "draft") as PublishingPlanChannelItem["status"],
+        };
+      }),
+    });
+  }
+
+  const scheduleMutation = useMutation({
+    mutationFn: async (plan: PublishingPlan) => {
+      const existing = new Set(
+        (publications ?? [])
+          .filter((p) => p.episode_id === plan.episodeId)
+          .map((p) => p.channel_id)
+      );
+      for (const ch of plan.channels) {
+        if (ch.enabled && !existing.has(ch.channelId)) {
+          await api.post(`/v1/projects/${projectId}/publishing/publications`, {
+            episode_id: plan.episodeId,
+            channel_id: ch.channelId,
+            metadata: { title: plan.episodeTitle, caption: "", tags: [] },
+          });
+        }
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["publications", projectId] });
+    },
+  });
 
   const handleOpenEditPlan = (plan: PublishingPlan) => {
     setEditingPlan(JSON.parse(JSON.stringify(plan)));
@@ -97,14 +177,13 @@ export default function PublishingPage({ params }: { params: { projectId: string
 
   const handleSavePlan = () => {
     if (!editingPlan) return;
-    setPlans((prev) =>
-      prev.map((p) => (p.id === editingPlan.id ? editingPlan : p))
-    );
+    scheduleMutation.mutate(editingPlan);
     setIsPlanModalOpen(false);
   };
 
   const statusBadges: Record<string, { color: string; label: string }> = {
     scheduled: { color: "blue", label: "Scheduled" },
+    publishing: { color: "cyan", label: "Publishing" },
     published: { color: "emerald", label: "Published" },
     failed: { color: "red", label: "Failed" },
     draft: { color: "gray", label: "Draft" },
@@ -240,6 +319,14 @@ export default function PublishingPage({ params }: { params: { projectId: string
                 Active Publishing Plans
               </Text>
 
+              {plans.length === 0 && (
+                <Paper p="lg" radius="md" className="bg-studio-card border border-studio-border">
+                  <Text size="xs" c="dimmed" fs="italic" ta="center">
+                    No publications scheduled yet. Edit a publishing plan to schedule one.
+                  </Text>
+                </Paper>
+              )}
+
               {plans.map((plan) => (
                 <Paper key={plan.id} p="lg" radius="md" className="bg-studio-card border border-studio-border space-y-4">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -358,6 +445,22 @@ export default function PublishingPage({ params }: { params: { projectId: string
 
             <Divider color="dark.5" />
 
+            {(channels ?? []).length > 0 && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {(channels ?? []).map((ch) => (
+                  <Paper key={ch.id} p="md" radius="sm" className="bg-studio-panel border border-studio-border space-y-3">
+                    <Group justify="space-between">
+                      <Text fw={700} size="sm" c="white">{ch.name || ch.platform}</Text>
+                      <Badge color={ch.enabled ? "emerald" : "gray"} variant="light" size="xs">
+                        {ch.enabled ? "CONNECTED" : "DISABLED"}
+                      </Badge>
+                    </Group>
+                    <Text size="xs" c="dimmed">Platform: {ch.platform}{ch.account_ref ? ` — ${ch.account_ref}` : ""}</Text>
+                  </Paper>
+                ))}
+              </div>
+            )}
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Facebook */}
               <Paper p="md" radius="sm" className="bg-studio-panel border border-studio-border space-y-3">
@@ -411,6 +514,27 @@ export default function PublishingPage({ params }: { params: { projectId: string
           <Paper p="xl" radius="md" className="bg-studio-card border border-studio-border space-y-4">
             <Text fw={700} size="sm" c="white">Publication History</Text>
             <Text size="xs" c="dimmed">History of all published episodes and clips across your channels.</Text>
+            {(publications ?? []).length === 0 ? (
+              <Text size="xs" c="dimmed" fs="italic" ta="center" py="md">No publications yet.</Text>
+            ) : (
+              <Stack gap="xs">
+                {(publications ?? []).map((pub) => (
+                  <Paper key={pub.id} p="sm" radius="sm" className="bg-studio-panel border border-studio-border">
+                    <Group justify="space-between">
+                      <div>
+                        <Text fw={700} size="xs" c="white">{pub.metadata?.title || episodeTitle(pub.episode_id)}</Text>
+                        <Text size="xs" c="dimmed" className="font-mono">
+                          {pub.channel_id} · {pub.scheduled_at ? new Date(pub.scheduled_at).toLocaleString() : "immediate"}
+                        </Text>
+                      </div>
+                      <Badge color={statusBadges[pub.status]?.color ?? "gray"} variant="light" size="xs">
+                        {statusBadges[pub.status]?.label ?? pub.status}
+                      </Badge>
+                    </Group>
+                  </Paper>
+                ))}
+              </Stack>
+            )}
           </Paper>
         </Tabs.Panel>
       </Tabs>

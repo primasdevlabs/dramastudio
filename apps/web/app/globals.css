@@ -50,10 +50,67 @@ pre,
   font-family: var(--font-inter), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 body {
   color: var(--foreground);
   background: var(--background);
   overflow-x: hidden;
+}
+
+/* Grainy gradient cards — layered film-grain noise over a tinted surface
+   gradient. Used by the marketing landing page. */
+.grain-card {
+  position: relative;
+  overflow: hidden;
+  background:
+    radial-gradient(120% 120% at 0% 0%, rgba(197, 106, 69, 0.10) 0%, transparent 55%),
+    linear-gradient(165deg, #24221F 0%, #1C1B19 70%);
+  border: 1px solid #393631;
+}
+
+.grain-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.45;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+.grain-card > * {
+  position: relative;
+  z-index: 1;
+}
+
+.grain-card--amber {
+  background:
+    radial-gradient(120% 120% at 0% 0%, rgba(193, 138, 69, 0.12) 0%, transparent 55%),
+    linear-gradient(165deg, #24221F 0%, #1C1B19 70%);
+}
+
+.grain-card--green {
+  background:
+    radial-gradient(120% 120% at 0% 0%, rgba(108, 154, 118, 0.12) 0%, transparent 55%),
+    linear-gradient(165deg, #24221F 0%, #1C1B19 70%);
+}
+
+.grain-card--red {
+  background:
+    radial-gradient(120% 120% at 0% 0%, rgba(198, 90, 80, 0.12) 0%, transparent 55%),
+    linear-gradient(165deg, #24221F 0%, #1C1B19 70%);
+}
+
+/* Ambient glow fields behind hero / CTA sections */
+.glow-field {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(90px);
+  pointer-events: none;
 }
 
 /* Professional solid surfaces — no fake glassmorphism or gradients */

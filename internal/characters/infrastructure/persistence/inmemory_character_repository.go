@@ -5,6 +5,8 @@ import (
 	"sync"
 
 	"dramastudio/internal/characters/domain"
+
+	"github.com/google/uuid"
 )
 
 type InMemoryCharacterRepository struct {
@@ -22,10 +24,27 @@ func NewInMemoryCharacterRepository() *InMemoryCharacterRepository {
 	}
 }
 
+// Save persists the character and snapshots its mutable profile as an
+// immutable version — same contract as the SQL adapter (§15).
 func (r *InMemoryCharacterRepository) Save(_ context.Context, c *domain.Character) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	r.characters[c.ID] = c
+	ver := &domain.CharacterVersion{
+		ID:           "cver_" + uuid.NewString(),
+		CharacterID:  c.ID,
+		Version:      c.Version,
+		Appearance:   c.Appearance,
+		Personality:  c.Personality,
+		VoiceProfile: c.VoiceProfile,
+		Wardrobe:     c.Wardrobe,
+	}
+	for _, existing := range r.versions[c.ID] {
+		if existing.Version == ver.Version {
+			return nil // immutable: existing snapshot wins (ON CONFLICT DO NOTHING)
+		}
+	}
+	r.versions[c.ID] = append(r.versions[c.ID], ver)
 	return nil
 }
 

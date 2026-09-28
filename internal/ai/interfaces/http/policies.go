@@ -57,6 +57,9 @@ func (r *policyReq) Validate() error {
 }
 
 func (h *AIHandler) setPolicy(w http.ResponseWriter, r *http.Request) {
+	if !requireOwner(w, r) {
+		return
+	}
 	var req policyReq
 	if !platformhttp.DecodeAndValidate(w, r, &req) {
 		return

@@ -1,25 +1,22 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api/client";
+import type { Episode } from "@/lib/api/types";
 
-export interface Script {
-  id: string;
-  episode_id: string;
-  version: number;
-  content: string;
-  scenes: { number: number; beats: string[]; action: string; dialogue: string }[];
-  status: "DRAFT" | "APPROVED" | "REJECTED";
-  created_at: string;
-}
-
+// The script is the episode's `script` field — no separate resource.
 export const scriptKeys = {
-  detail: (episodeId: string) => ["script", episodeId] as const,
+  detail: (projectId: string, seasonId: string, episodeId: string) =>
+    ["script", projectId, seasonId, episodeId] as const,
 };
 
-export function useScript(episodeId: string) {
+export function useScript(projectId: string, seasonId: string, episodeId: string) {
   return useQuery({
-    queryKey: scriptKeys.detail(episodeId),
+    queryKey: scriptKeys.detail(projectId, seasonId, episodeId),
     queryFn: () =>
-      api.get<Script>(`/v1/episodes/${episodeId}/script`).catch(() => null),
-    enabled: Boolean(episodeId),
+      api
+        .get<Episode>(
+          `/v1/projects/${projectId}/seasons/${seasonId}/episodes/${episodeId}`
+        )
+        .catch(() => null),
+    enabled: Boolean(projectId && seasonId && episodeId),
   });
 }

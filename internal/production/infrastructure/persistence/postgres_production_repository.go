@@ -229,13 +229,16 @@ func (r *PostgresProductionRepository) FindShotByID(ctx context.Context, id stri
 	return s, err
 }
 
-func (r *PostgresProductionRepository) ListShots(ctx context.Context, episodeID, sceneID string) ([]*domain.Shot, error) {
+func (r *PostgresProductionRepository) ListShots(ctx context.Context, projectID, episodeID, sceneID string) ([]*domain.Shot, error) {
 	var rows pgx.Rows
 	var err error
-	if sceneID != "" {
-		rows, err = r.q.Query(ctx, `SELECT id, project_id, episode_id, scene_id, seq, description, camera, characters, location_id, duration_sec, status, approved_asset FROM production.shots WHERE scene_id = $1 ORDER BY seq`, sceneID)
-	} else {
-		rows, err = r.q.Query(ctx, `SELECT id, project_id, episode_id, scene_id, seq, description, camera, characters, location_id, duration_sec, status, approved_asset FROM production.shots WHERE episode_id = $1 ORDER BY scene_id, seq`, episodeID)
+	switch {
+	case sceneID != "":
+		rows, err = r.q.Query(ctx, `SELECT id, project_id, episode_id, scene_id, seq, description, camera, characters, location_id, duration_sec, status, approved_asset FROM production.shots WHERE project_id = $1 AND scene_id = $2 ORDER BY seq`, projectID, sceneID)
+	case episodeID != "":
+		rows, err = r.q.Query(ctx, `SELECT id, project_id, episode_id, scene_id, seq, description, camera, characters, location_id, duration_sec, status, approved_asset FROM production.shots WHERE project_id = $1 AND episode_id = $2 ORDER BY scene_id, seq`, projectID, episodeID)
+	default:
+		rows, err = r.q.Query(ctx, `SELECT id, project_id, episode_id, scene_id, seq, description, camera, characters, location_id, duration_sec, status, approved_asset FROM production.shots WHERE project_id = $1 ORDER BY episode_id, scene_id, seq`, projectID)
 	}
 	if err != nil {
 		return nil, err

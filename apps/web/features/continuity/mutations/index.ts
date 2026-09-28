@@ -14,7 +14,10 @@ export function useResolveIssue() {
       issueId: string;
       resolution: string;
     }) =>
-      api.post(`/v1/continuity/issues/${issueId}/resolve`, { resolution }),
+      api.post(
+        `/v1/projects/${projectId}/continuity/issues/${issueId}/resolve`,
+        { resolution }
+      ),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({
         queryKey: continuityKeys.all(variables.projectId),

@@ -184,6 +184,10 @@ func (h *ProjectsHandler) transitionStatus(w http.ResponseWriter, r *http.Reques
 	}
 	p, err := h.service.TransitionStatus(r.Context(), domain.ProjectID(id), req.To)
 	if err != nil {
+		if err == domain.ErrProjectNotFound {
+			platformhttp.WriteError(w, http.StatusNotFound, "PROJECT_NOT_FOUND", "Project not found", platformhttp.RequestIDFrom(r), nil)
+			return
+		}
 		platformhttp.WriteError(w, http.StatusConflict, "INVALID_TRANSITION", err.Error(), platformhttp.RequestIDFrom(r), nil)
 		return
 	}
@@ -220,7 +224,11 @@ func (h *ProjectsHandler) getLatestBible(w http.ResponseWriter, r *http.Request)
 
 func (h *ProjectsHandler) getBibleVersion(w http.ResponseWriter, r *http.Request) {
 	id, _ := platformhttp.RequirePathValue(w, r, "projectId")
-	v, _ := strconv.Atoi(r.PathValue("version"))
+	v, err := strconv.Atoi(r.PathValue("version"))
+	if err != nil || v < 1 {
+		platformhttp.WriteError(w, http.StatusBadRequest, "INVALID_VERSION", "Version must be a positive integer", platformhttp.RequestIDFrom(r), nil)
+		return
+	}
 	bible, err := h.service.GetBibleVersion(r.Context(), domain.ProjectID(id), v)
 	if err != nil {
 		platformhttp.WriteError(w, http.StatusNotFound, "BIBLE_NOT_FOUND", "Bible version not found", platformhttp.RequestIDFrom(r), nil)

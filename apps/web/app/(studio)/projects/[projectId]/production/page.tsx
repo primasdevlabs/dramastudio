@@ -1,44 +1,86 @@
 "use client";
 
+import { useState, useEffect } from "react";
+import { useParams } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Activity, CheckCircle2, XCircle, RotateCcw, Shield, Cpu } from "lucide-react";
-import { Paper, Group, Stack, Title, Text, Badge, Button, ThemeIcon, Alert, SimpleGrid } from "@mantine/core";
+import { Paper, Group, Stack, Title, Text, Badge, Button, ThemeIcon, Alert, SimpleGrid, Select } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
 import { api } from "@/lib/api/client";
-import { LeadDirectorDecision, ApprovalRequest } from "@/lib/api/types";
+import { LeadDirectorDecision, ApprovalRequest, Season, Episode, ProductionRun } from "@/lib/api/types";
 
-export default function ProductionControlTowerPage({ params }: { params: { projectId: string } }) {
-  const { projectId } = params;
+export default function ProductionControlTowerPage() {
+  const { projectId } = useParams<{ projectId: string }>();
   const queryClient = useQueryClient();
 
   const { data: decisions } = useQuery({
     queryKey: ["decisions", projectId],
     queryFn: async () => {
-      const res = await api.get<{ decisions: LeadDirectorDecision[] }>(`/v1/agents/decisions?project_id=${projectId}`);
-      return res.decisions || [];
+      const res = await api.get<{ items: LeadDirectorDecision[] }>(`/v1/projects/${projectId}/agents/decisions`);
+      return res.items || [];
     },
   });
 
   const { data: approvals } = useQuery({
     queryKey: ["approvals", projectId],
     queryFn: async () => {
-      const res = await api.get<{ approvals: ApprovalRequest[] }>(`/v1/production/approval?project_id=${projectId}`);
-      return res.approvals || [];
+      const res = await api.get<{ items: ApprovalRequest[] }>(`/v1/projects/${projectId}/production/approvals`);
+      return res.items || [];
     },
   });
 
+  const { data: runs } = useQuery({
+    queryKey: ["production-runs", projectId],
+    queryFn: async () => {
+      const res = await api.get<{ items: ProductionRun[] }>(`/v1/projects/${projectId}/production/runs`);
+      return res.items || [];
+    },
+  });
+
+  // Episodes live under seasons — flatten all seasons' episodes into one
+  // selector so director steps and approvals target a real episode.
+  const { data: seasons } = useQuery({
+    queryKey: ["seasons", projectId],
+    queryFn: async () => {
+      const res = await api.get<{ items: Season[] }>(`/v1/projects/${projectId}/seasons`);
+      return res.items || [];
+    },
+  });
+
+  const { data: episodes } = useQuery({
+    queryKey: ["project-episodes", projectId, (seasons || []).map((s) => s.id).join(",")],
+    queryFn: async () => {
+      const all: Episode[] = [];
+      for (const s of seasons || []) {
+        const res = await api.get<{ items: Episode[] }>(
+          `/v1/projects/${projectId}/seasons/${s.id}/episodes`
+        );
+        all.push(...(res.items || []));
+      }
+      return all;
+    },
+    enabled: Boolean(seasons && seasons.length > 0),
+  });
+
+  const [episodeId, setEpisodeId] = useState("");
+  useEffect(() => {
+    if (!episodeId && episodes && episodes.length > 0) {
+      setEpisodeId(episodes[0].id);
+    }
+  }, [episodes, episodeId]);
+
   const triggerDirectorMutation = useMutation({
     mutationFn: async () => {
-      return api.post<LeadDirectorDecision>("/v1/agents/lead-director/step", {
-        project_id: projectId,
-        episode_id: "ep_001",
-      });
+      return api.post<{ result: Record<string, unknown>; error?: string }>(
+        `/v1/projects/${projectId}/agents/director/step`,
+        { episode_id: episodeId }
+      );
     },
     onSuccess: (d) => {
       queryClient.invalidateQueries({ queryKey: ["decisions", projectId] });
       notifications.show({
         title: "Lead Director Loop Executed",
-        message: `Decision: ${d.decision || "Step Completed"}`,
+        message: d.error ? `Step error: ${d.error}` : "Director step completed",
         color: "terracotta",
       });
     },
@@ -46,15 +88,15 @@ export default function ProductionControlTowerPage({ params }: { params: { proje
 
   const approvalMutation = useMutation({
     mutationFn: async (decision: "APPROVE" | "REJECT" | "REQUEST_REVISION") => {
-      return api.post<ApprovalRequest>("/v1/production/approval", {
-        project_id: projectId,
-        episode_id: "ep_001",
+      const req = await api.post<ApprovalRequest>(`/v1/projects/${projectId}/production/approvals`, {
+        episode_id: episodeId,
         stage: "Episode",
-        target_id: "ep_001",
-        decision,
-        notes: "Decision submitted via Production Control Tower",
-        decided_by: "Lead Producer",
+        target_id: episodeId,
       });
+      return api.post<ApprovalRequest>(
+        `/v1/projects/${projectId}/production/approvals/${req.id}/decide`,
+        { decision, notes: "Decision submitted via Production Console" }
+      );
     },
     onSuccess: (a) => {
       queryClient.invalidateQueries({ queryKey: ["approvals", projectId] });
@@ -63,6 +105,14 @@ export default function ProductionControlTowerPage({ params }: { params: { proje
         message: `Status set to ${a.decision}`,
         color: a.decision === "APPROVE" ? "emerald" : "amber",
       });
+    },
+  });
+
+  const runAction = useMutation({
+    mutationFn: async ({ runId, action }: { runId: string; action: "pause" | "resume" | "stop" }) =>
+      api.post<ProductionRun>(`/v1/projects/${projectId}/production/runs/${runId}/${action}`, {}),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["production-runs", projectId] });
     },
   });
 
@@ -85,17 +135,31 @@ export default function ProductionControlTowerPage({ params }: { params: { proje
             </div>
           </Group>
 
-          <Button
-            onClick={() => triggerDirectorMutation.mutate()}
-            loading={triggerDirectorMutation.isPending}
-            leftSection={<Cpu size={16} />}
-            variant="filled"
-            color="terracotta"
-            size="sm"
-            radius="sm"
-          >
-            Execute Lead Director Step
-          </Button>
+          <Group gap="sm">
+            <Select
+              size="xs"
+              placeholder="Select episode"
+              value={episodeId || null}
+              onChange={(v) => setEpisodeId(v || "")}
+              data={(episodes || []).map((e) => ({
+                value: e.id,
+                label: `E${String(e.number).padStart(2, "0")} — ${e.title}`,
+              }))}
+              styles={{ input: { backgroundColor: "#1a1a1a", color: "#fff", borderColor: "#333" } }}
+            />
+            <Button
+              onClick={() => triggerDirectorMutation.mutate()}
+              loading={triggerDirectorMutation.isPending}
+              disabled={!episodeId}
+              leftSection={<Cpu size={16} />}
+              variant="filled"
+              color="terracotta"
+              size="sm"
+              radius="sm"
+            >
+              Execute Lead Director Step
+            </Button>
+          </Group>
         </Group>
       </Paper>
 
@@ -121,6 +185,7 @@ export default function ProductionControlTowerPage({ params }: { params: { proje
           <Group gap="sm" pt="xs">
             <Button
               onClick={() => approvalMutation.mutate("APPROVE")}
+              disabled={!episodeId}
               loading={approvalMutation.isPending}
               leftSection={<CheckCircle2 size={16} />}
               color="emerald"
@@ -152,6 +217,63 @@ export default function ProductionControlTowerPage({ params }: { params: { proje
               Reject & Regenerate
             </Button>
           </Group>
+        </Stack>
+      </Paper>
+
+      {/* Active Production Runs */}
+      <Paper p="lg" radius="md" withBorder className="bg-studio-card border-studio-border">
+        <Stack gap="md">
+          <Group gap="xs">
+            <Activity size={16} className="text-studio-accent" />
+            <Text fw={700} size="sm" c="white">
+              Production Runs
+            </Text>
+          </Group>
+          <Stack gap="xs">
+            {runs && runs.length > 0 ? (
+              runs.map((run) => (
+                <Paper key={run.id} p="sm" radius="sm" className="bg-studio-panel border border-studio-border">
+                  <Group justify="space-between">
+                    <Group gap="xs">
+                      <Text fw={700} size="xs" c="white" className="font-mono">
+                        {run.id}
+                      </Text>
+                      <Badge size="xs" variant="light" color={run.status === "running" ? "emerald" : run.status === "paused" ? "amber" : "gray"}>
+                        {run.status}
+                      </Badge>
+                    </Group>
+                    <Group gap="xs">
+                      {run.status === "running" && (
+                        <Button size="xs" variant="light" color="amber"
+                          onClick={() => runAction.mutate({ runId: run.id, action: "pause" })}>
+                          Pause
+                        </Button>
+                      )}
+                      {run.status === "paused" && (
+                        <Button size="xs" variant="light" color="emerald"
+                          onClick={() => runAction.mutate({ runId: run.id, action: "resume" })}>
+                          Resume
+                        </Button>
+                      )}
+                      {(run.status === "running" || run.status === "paused") && (
+                        <Button size="xs" variant="light" color="red"
+                          onClick={() => runAction.mutate({ runId: run.id, action: "stop" })}>
+                          Stop
+                        </Button>
+                      )}
+                    </Group>
+                  </Group>
+                  <Text size="xs" c="dimmed" mt={4}>
+                    Episode {run.episode_id} — stage {run.stage}
+                  </Text>
+                </Paper>
+              ))
+            ) : (
+              <Text size="xs" c="dimmed" fs="italic" ta="center" py="md">
+                No production runs yet.
+              </Text>
+            )}
+          </Stack>
         </Stack>
       </Paper>
 

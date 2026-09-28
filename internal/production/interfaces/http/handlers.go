@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	platformhttp "dramastudio/internal/platform/http"
+	"dramastudio/internal/platform/security"
 	"dramastudio/internal/production/application/services"
 	"dramastudio/internal/production/domain"
 )
@@ -135,6 +136,16 @@ func (r *decideReq) Validate() error {
 
 // --- handlers ---
 
+// verifyOwned returns true when the entity's project_id matches the path
+// project; writes 404 otherwise (no cross-project existence leak).
+func (h *ProductionHandler) verifyOwned(w http.ResponseWriter, r *http.Request, entityProjectID string) bool {
+	if entityProjectID != "" && entityProjectID != r.PathValue("projectId") {
+		platformhttp.WriteError(w, http.StatusNotFound, "NOT_FOUND", "Resource not found", platformhttp.RequestIDFrom(r), nil)
+		return false
+	}
+	return true
+}
+
 func (h *ProductionHandler) listRuns(w http.ResponseWriter, r *http.Request) {
 	runs, err := h.service.ListRuns(r.Context(), r.PathValue("projectId"))
 	if err != nil {
@@ -163,6 +174,9 @@ func (h *ProductionHandler) getRun(w http.ResponseWriter, r *http.Request) {
 		h.writeNotFound(w, r, "RUN_NOT_FOUND", "Production run not found")
 		return
 	}
+	if !h.verifyOwned(w, r, run.ProjectID) {
+		return
+	}
 	platformhttp.WriteJSON(w, http.StatusOK, run)
 }
 
@@ -179,6 +193,14 @@ func (h *ProductionHandler) stopRun(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *ProductionHandler) runTransition(w http.ResponseWriter, r *http.Request, fn func(ctx context.Context, id string) (*domain.ProductionRun, error)) {
+	existing, err := h.service.GetRun(r.Context(), r.PathValue("runId"))
+	if err != nil {
+		h.writeNotFound(w, r, "RUN_NOT_FOUND", "Production run not found")
+		return
+	}
+	if !h.verifyOwned(w, r, existing.ProjectID) {
+		return
+	}
 	run, err := fn(r.Context(), r.PathValue("runId"))
 	if err != nil {
 		if err == domain.ErrInvalidTransition {
@@ -195,6 +217,9 @@ func (h *ProductionHandler) listRunJobs(w http.ResponseWriter, r *http.Request) 
 	run, err := h.service.GetRun(r.Context(), r.PathValue("runId"))
 	if err != nil {
 		h.writeNotFound(w, r, "RUN_NOT_FOUND", "Production run not found")
+		return
+	}
+	if !h.verifyOwned(w, r, run.ProjectID) {
 		return
 	}
 	platformhttp.WriteJSON(w, http.StatusOK, map[string]interface{}{"items": run.Jobs})
@@ -235,6 +260,14 @@ func (h *ProductionHandler) createJob(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *ProductionHandler) retryJob(w http.ResponseWriter, r *http.Request) {
+	existing, err := h.service.GetJob(r.Context(), r.PathValue("jobId"))
+	if err != nil {
+		h.writeNotFound(w, r, "JOB_NOT_FOUND", "Job not found")
+		return
+	}
+	if !h.verifyOwned(w, r, existing.ProjectID) {
+		return
+	}
 	j, err := h.service.RetryJob(r.Context(), r.PathValue("jobId"))
 	if err != nil {
 		if err == domain.ErrInvalidTransition {
@@ -248,7 +281,7 @@ func (h *ProductionHandler) retryJob(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *ProductionHandler) listShots(w http.ResponseWriter, r *http.Request) {
-	shots, err := h.service.ListShots(r.Context(), r.URL.Query().Get("episode_id"), r.URL.Query().Get("scene_id"))
+	shots, err := h.service.ListShots(r.Context(), r.PathValue("projectId"), r.URL.Query().Get("episode_id"), r.URL.Query().Get("scene_id"))
 	if err != nil {
 		platformhttp.WriteErrorFrom(w, r, err)
 		return
@@ -284,7 +317,15 @@ func (h *ProductionHandler) approveShot(w http.ResponseWriter, r *http.Request) 
 	if !platformhttp.DecodeAndValidate(w, r, &req) {
 		return
 	}
-	shot, err := h.service.ApproveShot(r.Context(), r.PathValue("shotId"), req.AssetURL)
+	shot, err := h.service.GetShot(r.Context(), r.PathValue("shotId"))
+	if err != nil {
+		h.writeNotFound(w, r, "SHOT_NOT_FOUND", "Shot not found")
+		return
+	}
+	if !h.verifyOwned(w, r, shot.ProjectID) {
+		return
+	}
+	shot, err = h.service.ApproveShot(r.Context(), r.PathValue("shotId"), req.AssetURL)
 	if err != nil {
 		h.writeNotFound(w, r, "SHOT_NOT_FOUND", "Shot not found")
 		return
@@ -320,7 +361,21 @@ func (h *ProductionHandler) decideApproval(w http.ResponseWriter, r *http.Reques
 	if !platformhttp.DecodeAndValidate(w, r, &req) {
 		return
 	}
-	a, err := h.service.Decide(r.Context(), r.PathValue("approvalId"), req.Decision, req.Notes, req.DecidedBy)
+	a, err := h.service.GetApproval(r.Context(), r.PathValue("approvalId"))
+	if err != nil {
+		h.writeNotFound(w, r, "APPROVAL_NOT_FOUND", "Approval request not found")
+		return
+	}
+	if !h.verifyOwned(w, r, a.ProjectID) {
+		return
+	}
+	// decided_by is the authenticated principal — never client-supplied
+	// (audit integrity, §63).
+	decidedBy := req.DecidedBy
+	if p, ok := security.PrincipalFrom(r.Context()); ok && p.UserID != "" {
+		decidedBy = p.UserID
+	}
+	a, err = h.service.Decide(r.Context(), r.PathValue("approvalId"), req.Decision, req.Notes, decidedBy)
 	if err != nil {
 		if err == domain.ErrInvalidTransition {
 			platformhttp.WriteError(w, http.StatusConflict, "ALREADY_DECIDED", "Approval already decided", platformhttp.RequestIDFrom(r), nil)

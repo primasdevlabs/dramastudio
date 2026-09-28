@@ -1,29 +1,27 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api/client";
-
-export interface AudioTrack {
-  id: string;
-  episode_id: string;
-  type: "dialogue" | "music" | "sfx";
-  character_id?: string;
-  url: string;
-  duration_seconds: number;
-  status: "PENDING" | "GENERATED" | "APPROVED";
-}
+import type { Asset } from "@/lib/api/types";
 
 export const audioKeys = {
-  all: (episodeId: string) => ["audio", episodeId] as const,
+  all: (projectId: string, episodeId: string) =>
+    ["audio", projectId, episodeId] as const,
 };
 
-export function useAudioTracks(episodeId: string) {
+export function useAudioTracks(projectId: string, episodeId: string) {
   return useQuery({
-    queryKey: audioKeys.all(episodeId),
+    queryKey: audioKeys.all(projectId, episodeId),
     queryFn: async () => {
-      const res = await api.get<{ tracks: AudioTrack[] }>(
-        `/v1/episodes/${episodeId}/audio`
+      // The asset list is project-scoped; episode + audio-type filtering
+      // happens client-side (backend has no episode_id query param).
+      const res = await api.get<{ items: Asset[] }>(
+        `/v1/projects/${projectId}/media/assets`
       );
-      return res.tracks ?? [];
+      return (res.items ?? []).filter(
+        (a) =>
+          a.episode_id === episodeId &&
+          (a.type === "voice" || a.type === "music" || a.type === "sfx")
+      );
     },
-    enabled: Boolean(episodeId),
+    enabled: Boolean(projectId && episodeId),
   });
 }

@@ -12,8 +12,8 @@ export default function ProjectsPage() {
   const { data, isLoading, error } = useQuery({
     queryKey: ["projects"],
     queryFn: async () => {
-      const res = await api.get<{ projects: Project[] }>("/v1/projects");
-      return res.projects || [];
+      const res = await api.get<{ items: Project[] }>("/v1/projects");
+      return res.items || [];
     },
   });
 

@@ -105,6 +105,25 @@ func (r *PostgresCanonRepository) SaveFactVersion(ctx context.Context, factID st
 	return err
 }
 
+func (r *PostgresCanonRepository) ListFactVersions(ctx context.Context, factID string) ([]*domain.FactVersion, error) {
+	rows, err := r.q.Query(ctx, `
+		SELECT fact_id, version, value, updated_at
+		FROM canon.fact_versions WHERE fact_id = $1 ORDER BY version`, factID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := make([]*domain.FactVersion, 0)
+	for rows.Next() {
+		v := &domain.FactVersion{}
+		if err := rows.Scan(&v.FactID, &v.Version, &v.Value, &v.UpdatedAt); err != nil {
+			return nil, err
+		}
+		out = append(out, v)
+	}
+	return out, rows.Err()
+}
+
 func (r *PostgresCanonRepository) GetKnowledgeState(ctx context.Context, characterID, episodeID string) (*domain.KnowledgeState, error) {
 	var ks domain.KnowledgeState
 	var ids []byte

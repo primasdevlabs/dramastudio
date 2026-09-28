@@ -13,8 +13,8 @@ interface CreateCharacterInput {
 export function useCreateCharacter() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (input: CreateCharacterInput) =>
-      api.post<Character>("/v1/characters", input),
+    mutationFn: ({ project_id, ...data }: CreateCharacterInput) =>
+      api.post<Character>(`/v1/projects/${project_id}/characters`, data),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({
         queryKey: characterKeys.all(variables.project_id),

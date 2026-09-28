@@ -5,7 +5,8 @@ import { shotKeys } from "../queries";
 
 interface GenerateShotInput {
   project_id: string;
-  shot_id: string;
+  episode_id?: string;
+  shot_id?: string;
   prompt: string;
   type: "video" | "image";
 }
@@ -13,8 +14,15 @@ interface GenerateShotInput {
 export function useGenerateShot() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (input: GenerateShotInput) =>
-      api.post<Asset>("/v1/media/generate", input),
+    mutationFn: ({ project_id, type, ...rest }: GenerateShotInput) =>
+      api.post<{ job: unknown; asset: Asset }>(
+        `/v1/projects/${project_id}/media/assets`,
+        {
+          capability: type === "video" ? "video_generation" : "image_generation",
+          type,
+          ...rest,
+        }
+      ),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({
         queryKey: shotKeys.all(variables.project_id),
@@ -28,11 +36,15 @@ export function useRegenerateShot() {
   return useMutation({
     mutationFn: ({
       projectId,
-      shotId,
+      assetId,
     }: {
       projectId: string;
-      shotId: string;
-    }) => api.post<Asset>(`/v1/media/assets/${shotId}/regenerate`, {}),
+      assetId: string;
+    }) =>
+      api.post<Asset>(
+        `/v1/projects/${projectId}/media/assets/${assetId}/regenerate`,
+        {}
+      ),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({
         queryKey: shotKeys.all(variables.projectId),

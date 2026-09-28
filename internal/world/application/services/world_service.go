@@ -2,21 +2,35 @@ package services
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/google/uuid"
 
+	"dramastudio/internal/platform/events"
 	"dramastudio/internal/world/domain"
 )
 
 type WorldService struct {
-	repo domain.WorldRepository
+	repo   domain.WorldRepository
+	events *events.Bus // may be nil; set via SetEvents
 }
 
 func NewWorldService(repo domain.WorldRepository) *WorldService {
 	return &WorldService{repo: repo}
 }
 
+// SetEvents injects the domain event bus (§48). Nil-safe emitter.
+func (s *WorldService) SetEvents(b *events.Bus) {
+	s.events = b
+}
+
 func (s *WorldService) CreateLocation(ctx context.Context, projectID, name, kind, description, parentID string) (*domain.Location, error) {
+	if parentID != "" {
+		parent, err := s.repo.FindLocationByID(ctx, parentID)
+		if err != nil || parent.ProjectID != projectID {
+			return nil, domain.ErrLocationNotFound
+		}
+	}
 	loc := &domain.Location{
 		ID:          "loc_" + uuid.NewString(),
 		ProjectID:   projectID,
@@ -29,6 +43,8 @@ func (s *WorldService) CreateLocation(ctx context.Context, projectID, name, kind
 	if err := s.repo.SaveLocation(ctx, loc); err != nil {
 		return nil, err
 	}
+	s.events.Emit(ctx, events.LocationAdded, projectID, loc.ID,
+		fmt.Sprintf("Location %q created", name))
 	return loc, nil
 }
 
@@ -58,6 +74,12 @@ func (s *WorldService) AddVariant(ctx context.Context, locationID, name string, 
 }
 
 func (s *WorldService) CreateProp(ctx context.Context, projectID, name, description, locationID string) (*domain.Prop, error) {
+	if locationID != "" {
+		loc, err := s.repo.FindLocationByID(ctx, locationID)
+		if err != nil || loc.ProjectID != projectID {
+			return nil, domain.ErrLocationNotFound
+		}
+	}
 	p := &domain.Prop{
 		ID:          "prop_" + uuid.NewString(),
 		ProjectID:   projectID,

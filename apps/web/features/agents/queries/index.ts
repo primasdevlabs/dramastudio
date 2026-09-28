@@ -1,26 +1,28 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api/client";
 
-export interface AgentActivity {
-  agent_name: string;
-  role: string;
-  current_task: string;
-  status: "ACTIVE" | "IDLE" | "WAITING" | "ERROR";
-  last_action_at: string;
+export interface AgentTask {
+  id: string;
+  agent_id: string;
+  objective: string;
+  status: string;
+  result?: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
 }
 
 export const agentKeys = {
-  activity: (projectId: string) => ["agent-activity", projectId] as const,
+  tasks: (projectId: string) => ["agent-tasks", projectId] as const,
 };
 
-export function useAgentActivity(projectId: string) {
+export function useAgentTasks(projectId: string) {
   return useQuery({
-    queryKey: agentKeys.activity(projectId),
+    queryKey: agentKeys.tasks(projectId),
     queryFn: async () => {
-      const res = await api.get<{ agents: AgentActivity[] }>(
-        `/v1/agents/activity?project_id=${projectId}`
+      const res = await api.get<{ items: AgentTask[] }>(
+        `/v1/projects/${projectId}/agents/tasks`
       );
-      return res.agents ?? [];
+      return res.items ?? [];
     },
     enabled: Boolean(projectId),
   });

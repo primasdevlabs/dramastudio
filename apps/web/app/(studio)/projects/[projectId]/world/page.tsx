@@ -5,33 +5,33 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Globe, Plus, Sun, Moon, CloudRain, MapPin } from "lucide-react";
 import { Paper, Group, Stack, Title, Text, Badge, Button, Modal, TextInput, Select, Textarea, ThemeIcon, SimpleGrid, Card } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
+import { useParams } from "next/navigation";
 import { api } from "@/lib/api/client";
 import { Location } from "@/lib/api/types";
 
-export default function WorldStudioPage({ params }: { params: { projectId: string } }) {
-  const { projectId } = params;
+export default function WorldStudioPage() {
+  const { projectId } = useParams<{ projectId: string }>();
   const queryClient = useQueryClient();
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
-  const [type, setType] = useState("Interior");
+  const [kind, setKind] = useState("Interior");
   const [opened, setOpened] = useState(false);
 
   const { data: locations, isLoading } = useQuery({
     queryKey: ["locations", projectId],
     queryFn: async () => {
-      const res = await api.get<{ locations: Location[] }>(`/v1/world/locations?project_id=${projectId}`);
-      return res.locations || [];
+      const res = await api.get<{ items: Location[] }>(`/v1/projects/${projectId}/world/locations`);
+      return res.items || [];
     },
   });
 
   const createMutation = useMutation({
     mutationFn: async () => {
-      return api.post<Location>("/v1/world/locations", {
-        project_id: projectId,
+      return api.post<Location>(`/v1/projects/${projectId}/world/locations`, {
         name,
         description,
-        type,
+        kind,
       });
     },
     onSuccess: (loc) => {
@@ -103,8 +103,8 @@ export default function WorldStudioPage({ params }: { params: { projectId: strin
 
           <Select
             label="Type"
-            value={type}
-            onChange={(val) => setType(val || "Interior")}
+            value={kind}
+            onChange={(val) => setKind(val || "Interior")}
             data={[
               { value: "Interior", label: "Interior" },
               { value: "Exterior", label: "Exterior" },
@@ -161,7 +161,7 @@ export default function WorldStudioPage({ params }: { params: { projectId: strin
                   </Group>
 
                   <Badge color="emerald" variant="light" size="sm">
-                    {loc.type}
+                    {loc.kind}
                   </Badge>
                 </Group>
 

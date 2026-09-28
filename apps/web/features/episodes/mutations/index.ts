@@ -4,6 +4,7 @@ import type { Episode } from "@/lib/api/types";
 import { episodeKeys } from "../queries";
 
 interface CreateEpisodeInput {
+  project_id: string;
   season_id: string;
   number: number;
   title: string;
@@ -13,11 +14,14 @@ interface CreateEpisodeInput {
 export function useCreateEpisode() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ season_id, ...data }: CreateEpisodeInput) =>
-      api.post<Episode>(`/v1/seasons/${season_id}/episodes`, data),
+    mutationFn: ({ project_id, season_id, ...data }: CreateEpisodeInput) =>
+      api.post<Episode>(
+        `/v1/projects/${project_id}/seasons/${season_id}/episodes`,
+        data
+      ),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({
-        queryKey: episodeKeys.all(variables.season_id),
+        queryKey: episodeKeys.all(variables.project_id, variables.season_id),
       });
     },
   });

@@ -22,13 +22,3 @@ export function useCreateProject() {
   });
 }
 
-export function useDeleteProject() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (projectId: string) =>
-      api.delete(`/v1/projects/${projectId}`),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: projectKeys.all });
-    },
-  });
-}

@@ -7,16 +7,23 @@ import (
 
 	"github.com/google/uuid"
 
+	"dramastudio/internal/platform/events"
 	"dramastudio/internal/publishing/domain"
 )
 
 type PublishingService struct {
 	repo     domain.PublishingRepository
 	adapters map[domain.ChannelType]domain.ChannelAdapter
+	events   *events.Bus // may be nil; set via SetEvents
 }
 
 func NewPublishingService(repo domain.PublishingRepository) *PublishingService {
 	return &PublishingService{repo: repo, adapters: map[domain.ChannelType]domain.ChannelAdapter{}}
+}
+
+// SetEvents injects the domain event bus (§48). Nil-safe emitter.
+func (s *PublishingService) SetEvents(b *events.Bus) {
+	s.events = b
 }
 
 // RegisterAdapter wires a platform adapter (youtube/tiktok/instagram).
@@ -57,6 +64,15 @@ func (s *PublishingService) SchedulePublication(ctx context.Context, projectID, 
 			return existing, nil
 		}
 	}
+	// The channel must belong to this project — scheduling against a
+	// foreign channel would push content to another org's account.
+	channel, err := s.repo.FindChannelByID(ctx, channelID)
+	if err != nil || channel.ProjectID != projectID {
+		return nil, fmt.Errorf("channel %s not found in project", channelID)
+	}
+	if !channel.Enabled {
+		return nil, fmt.Errorf("channel %s is disabled", channelID)
+	}
 	status := domain.PubDraft
 	if scheduledAt != nil {
 		status = domain.PubScheduled
@@ -92,6 +108,9 @@ func (s *PublishingService) Publish(ctx context.Context, publicationID string) (
 	if err != nil {
 		return nil, err
 	}
+	if channel.ProjectID != pub.ProjectID {
+		return nil, fmt.Errorf("channel %s does not belong to publication project", channel.ID)
+	}
 	if !channel.Enabled {
 		return nil, fmt.Errorf("channel %s is disabled", channel.ID)
 	}
@@ -108,6 +127,8 @@ func (s *PublishingService) Publish(ctx context.Context, publicationID string) (
 		pub.Status = domain.PubFailed
 		pub.PlatformResponse = map[string]interface{}{"error": err.Error()}
 		_ = s.repo.SavePublication(ctx, pub)
+		s.events.Emit(ctx, events.PublicationFailed, pub.ProjectID, pub.ID,
+			fmt.Sprintf("Publish to %s failed: %s", channel.Platform, err))
 		return nil, err
 	}
 	now := time.Now().UTC()
@@ -118,6 +139,8 @@ func (s *PublishingService) Publish(ctx context.Context, publicationID string) (
 	if err := s.repo.SavePublication(ctx, pub); err != nil {
 		return nil, err
 	}
+	s.events.Emit(ctx, events.PublicationPublished, pub.ProjectID, pub.ID,
+		fmt.Sprintf("Published episode to %s", channel.Platform))
 	return pub, nil
 }
 

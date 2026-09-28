@@ -66,12 +66,12 @@ export interface StudioSocialChannels {
 }
 
 export interface PublishingPlanChannelItem {
-  channelId: "facebook" | "instagram" | "tiktok" | "youtube";
+  channelId: string;
   channelName: string;
   enabled: boolean;
   format: string;
   publicationTime: string;
-  status: "scheduled" | "published" | "failed" | "draft";
+  status: "scheduled" | "publishing" | "published" | "failed" | "draft";
   failureReason?: string;
 }
 

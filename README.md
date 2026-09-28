@@ -400,8 +400,18 @@ dramastudio/
 ### Prerequisites
 
 - **Go 1.22+** installed
-- **Docker** & **PostgreSQL** (for local development)
+- **Node.js 20+** (for the `apps/web` studio UI)
 - **FFmpeg** (for video rendering & timeline composition)
+- PostgreSQL/Temporal/S3 only for the production profile — development runs on SQLite + the in-process engine + local storage
+
+### Run
+
+```bash
+go run ./apps/api          # API on :9471 (SQLite, no external services)
+cd apps/web && npm run dev # Studio UI on :8742
+```
+
+Full setup, env variables, and smoke tests: **[docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)**
 
 ### Verification & Testing
 

@@ -10,10 +10,10 @@ export function useCanonFacts(projectId: string) {
   return useQuery({
     queryKey: canonKeys.all(projectId),
     queryFn: async () => {
-      const res = await api.get<{ facts: StoryFact[] }>(
-        `/v1/canon/facts?project_id=${projectId}`
+      const res = await api.get<{ items: StoryFact[] }>(
+        `/v1/projects/${projectId}/canon/facts`
       );
-      return res.facts ?? [];
+      return res.items ?? [];
     },
     enabled: Boolean(projectId),
   });

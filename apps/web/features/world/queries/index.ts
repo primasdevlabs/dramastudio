@@ -10,10 +10,10 @@ export function useLocations(projectId: string) {
   return useQuery({
     queryKey: worldKeys.locations(projectId),
     queryFn: async () => {
-      const res = await api.get<{ locations: Location[] }>(
-        `/v1/world/locations?project_id=${projectId}`
+      const res = await api.get<{ items: Location[] }>(
+        `/v1/projects/${projectId}/world/locations`
       );
-      return res.locations ?? [];
+      return res.items ?? [];
     },
     enabled: Boolean(projectId),
   });

@@ -20,6 +20,7 @@ func (h *CanonHandler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /v1/projects/{projectId}/canon/facts", h.listFacts)
 	mux.HandleFunc("POST /v1/projects/{projectId}/canon/facts", h.createFact)
 	mux.HandleFunc("GET /v1/projects/{projectId}/canon/facts/{factId}", h.getFact)
+	mux.HandleFunc("GET /v1/projects/{projectId}/canon/facts/{factId}/versions", h.factVersions)
 	mux.HandleFunc("POST /v1/projects/{projectId}/canon/facts/{factId}/retcon", h.retconFact)
 	mux.HandleFunc("GET /v1/projects/{projectId}/canon/rules", h.listRules)
 	mux.HandleFunc("POST /v1/projects/{projectId}/canon/rules", h.createRule)
@@ -100,7 +101,7 @@ func (h *CanonHandler) createFact(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *CanonHandler) getFact(w http.ResponseWriter, r *http.Request) {
-	f, err := h.service.GetFact(r.Context(), r.PathValue("factId"))
+	f, err := h.service.GetFact(r.Context(), r.PathValue("projectId"), r.PathValue("factId"))
 	if err != nil {
 		platformhttp.WriteError(w, http.StatusNotFound, "FACT_NOT_FOUND", "Fact not found", platformhttp.RequestIDFrom(r), nil)
 		return
@@ -108,8 +109,17 @@ func (h *CanonHandler) getFact(w http.ResponseWriter, r *http.Request) {
 	platformhttp.WriteJSON(w, http.StatusOK, f)
 }
 
+func (h *CanonHandler) factVersions(w http.ResponseWriter, r *http.Request) {
+	vers, err := h.service.ListFactVersions(r.Context(), r.PathValue("projectId"), r.PathValue("factId"))
+	if err != nil {
+		platformhttp.WriteError(w, http.StatusNotFound, "FACT_NOT_FOUND", "Fact not found", platformhttp.RequestIDFrom(r), nil)
+		return
+	}
+	platformhttp.WriteJSON(w, http.StatusOK, map[string]interface{}{"items": vers})
+}
+
 func (h *CanonHandler) retconFact(w http.ResponseWriter, r *http.Request) {
-	f, err := h.service.Retcon(r.Context(), r.PathValue("factId"))
+	f, err := h.service.Retcon(r.Context(), r.PathValue("projectId"), r.PathValue("factId"))
 	if err != nil {
 		platformhttp.WriteError(w, http.StatusNotFound, "FACT_NOT_FOUND", "Fact not found", platformhttp.RequestIDFrom(r), nil)
 		return
@@ -185,7 +195,7 @@ func (h *CanonHandler) grantKnowledge(w http.ResponseWriter, r *http.Request) {
 	if !platformhttp.DecodeAndValidate(w, r, &req) {
 		return
 	}
-	ks, err := h.service.GrantKnowledge(r.Context(), r.PathValue("characterId"), req.EpisodeID, req.FactIDs)
+	ks, err := h.service.GrantKnowledge(r.Context(), r.PathValue("projectId"), r.PathValue("characterId"), req.EpisodeID, req.FactIDs)
 	if err != nil {
 		platformhttp.WriteErrorFrom(w, r, err)
 		return

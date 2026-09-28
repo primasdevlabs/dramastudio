@@ -33,7 +33,7 @@ type ProductionRepository interface {
 	// Shots
 	SaveShot(ctx context.Context, shot *Shot) error
 	FindShotByID(ctx context.Context, id string) (*Shot, error)
-	ListShots(ctx context.Context, episodeID, sceneID string) ([]*Shot, error)
+	ListShots(ctx context.Context, projectID, episodeID, sceneID string) ([]*Shot, error)
 
 	// Approvals
 	SaveApproval(ctx context.Context, app *ApprovalRequest) error

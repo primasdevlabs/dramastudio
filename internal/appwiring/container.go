@@ -47,8 +47,11 @@ import (
 
 	"dramastudio/internal/platform/ai/provider"
 	"dramastudio/internal/platform/ai/routing"
+	"dramastudio/internal/platform/audit"
 	"dramastudio/internal/platform/database/postgres"
 	"dramastudio/internal/platform/database/sqlite"
+	"dramastudio/internal/platform/events"
+	platformhttp "dramastudio/internal/platform/http"
 
 	// Adapter packages register their factories via init(). Adding a new
 	// provider kind to the catalog requires no changes here.
@@ -72,6 +75,13 @@ type Container struct {
 	SQLite *sqlite.DB
 	Store  storage.ObjectStorage
 	JWT    *security.JWTService
+
+	// Events is the shared domain event bus; Broker fans events out to SSE
+	// clients (§48, §58). Audit records append-only action logs (§63).
+	Events            *events.Bus
+	Broker            *platformhttp.SSEBroker
+	Audit             audit.Logger
+	WebhookDeliveries *events.WebhookDeliveryStore // nil without SQL
 
 	Resolver *routing.Resolver
 
@@ -130,6 +140,29 @@ func Build(ctx context.Context, cfg *configs.Config) (*Container, error) {
 	if r.sqldb != nil {
 		c.SQLite = r.sqldb
 	}
+
+	// --- domain events + realtime ---
+	// One bus per process: services emit, the log persists (§48), and the
+	// SSE broker streams to studio clients (§58).
+	var eventLog events.EventLogStore = events.NoopEventLog{}
+	var querier postgres.Querier
+	if r.db != nil {
+		querier = r.db.Pool
+	}
+	if r.sqldb != nil {
+		querier = r.sqldb
+	}
+	if querier != nil {
+		eventLog = events.NewSQLEventLog(querier)
+	}
+	c.Events = events.NewBus(eventLog)
+	c.Broker = platformhttp.NewSSEBroker()
+	c.Audit = audit.NewLogger(querier)
+	c.WebhookDeliveries = events.NewWebhookDeliveryStore(querier)
+	c.Events.SubscribeAll(func(_ context.Context, e events.DomainEvent) error {
+		c.Broker.Publish(e.Type, e)
+		return nil
+	})
 
 	// --- AI provider routing ---
 	c.Resolver = routing.NewResolver(aiApp.NewRoutingRegistry(r.modelRegistry))
@@ -250,6 +283,23 @@ func (c *Container) buildServices(cfg *configs.Config, r repoBundle) {
 	c.AIExecutor = aiApp.NewExecuteGenerationHandler(r.modelRegistry, c.Resolver)
 	c.ModelRegistry = r.modelRegistry
 
+	// Domain event emitters (§48): every state transition that matters to
+	// operators or other modules lands on the shared bus.
+	c.Projects.SetEvents(c.Events)
+	c.Story.SetEvents(c.Events)
+	c.Canon.SetEvents(c.Events)
+	c.Characters.SetEvents(c.Events)
+	c.World.SetEvents(c.Events)
+	c.Production.SetEvents(c.Events)
+	c.Continuity.SetEvents(c.Events)
+	c.Media.SetEvents(c.Events)
+	c.Postprod.SetEvents(c.Events)
+	c.Publishing.SetEvents(c.Events)
+
+	// Append-only audit trail (§63): identity actions + human decisions.
+	c.Identity.SetAudit(c.Audit)
+	c.Production.SetAudit(c.Audit)
+
 	// Publishing adapters — channel config (account/token refs) comes from
 	// the channel row; base URLs from env so no secrets live in code.
 	c.buildAdapters(cfg, r)
@@ -265,6 +315,7 @@ func (c *Container) buildAdapters(cfg *configs.Config, r repoBundle) {
 	// Lead director observes real production + continuity state.
 	observer := NewProductionObserver(c.Production, c.Continuity)
 	c.Agents = agentsApp.NewAgentService(r.agents, director.NewLeadDirector(observer, envOr("AGENT_MODE", "monitored")))
+	c.Agents.SetEvents(c.Events)
 
 	// --- workflow activities ---
 	c.Activities = activities.NewEpisodeActivities(activities.Deps{

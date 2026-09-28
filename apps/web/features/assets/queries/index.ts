@@ -12,10 +12,10 @@ export function useAssets(projectId: string) {
   return useQuery({
     queryKey: assetKeys.all(projectId),
     queryFn: async () => {
-      const res = await api.get<{ assets: Asset[] }>(
-        `/v1/media/assets?project_id=${projectId}`
+      const res = await api.get<{ items: Asset[] }>(
+        `/v1/projects/${projectId}/media/assets`
       );
-      return res.assets ?? [];
+      return res.items ?? [];
     },
     enabled: Boolean(projectId),
   });

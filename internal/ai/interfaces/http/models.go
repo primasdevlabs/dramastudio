@@ -59,6 +59,9 @@ func (h *AIHandler) listModels(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *AIHandler) createModel(w http.ResponseWriter, r *http.Request) {
+	if !requireOwner(w, r) {
+		return
+	}
 	var req modelReq
 	if !platformhttp.DecodeAndValidate(w, r, &req) {
 		return
@@ -89,6 +92,9 @@ func (h *AIHandler) createModel(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *AIHandler) deleteModel(w http.ResponseWriter, r *http.Request) {
+	if !requireOwner(w, r) {
+		return
+	}
 	if err := h.repo.DeleteModel(r.Context(), domain.ModelID(r.PathValue("modelId"))); err != nil {
 		platformhttp.WriteErrorFrom(w, r, err)
 		return

@@ -40,6 +40,49 @@ func (h *StoryHandler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /v1/projects/{projectId}/story/plot-threads", h.createThread)
 }
 
+// verifySeason confirms seasonID lives under projectID (season→series).
+// Prevents hierarchy-confusion access where a valid projectId in the path is
+// combined with nested IDs from another project/org.
+func (h *StoryHandler) verifySeason(w http.ResponseWriter, r *http.Request, projectID, seasonID string) (*domain.Season, bool) {
+	se, err := h.service.GetSeason(r.Context(), seasonID)
+	if err != nil {
+		platformhttp.WriteError(w, http.StatusNotFound, "SEASON_NOT_FOUND", "Season not found", platformhttp.RequestIDFrom(r), nil)
+		return nil, false
+	}
+	ser, err := h.service.GetSeries(r.Context(), se.SeriesID)
+	if err != nil || ser.ProjectID != projectID {
+		platformhttp.WriteError(w, http.StatusNotFound, "SEASON_NOT_FOUND", "Season not found", platformhttp.RequestIDFrom(r), nil)
+		return nil, false
+	}
+	return se, true
+}
+
+// verifyEpisode confirms episodeID lives under seasonID→projectID.
+func (h *StoryHandler) verifyEpisode(w http.ResponseWriter, r *http.Request, projectID, seasonID, episodeID string) (*domain.Episode, bool) {
+	if _, ok := h.verifySeason(w, r, projectID, seasonID); !ok {
+		return nil, false
+	}
+	ep, err := h.service.GetEpisode(r.Context(), episodeID)
+	if err != nil || ep.SeasonID != seasonID {
+		platformhttp.WriteError(w, http.StatusNotFound, "EPISODE_NOT_FOUND", "Episode not found", platformhttp.RequestIDFrom(r), nil)
+		return nil, false
+	}
+	return ep, true
+}
+
+// verifyScene confirms sceneID lives under episodeID→seasonID→projectID.
+func (h *StoryHandler) verifyScene(w http.ResponseWriter, r *http.Request, projectID, seasonID, episodeID, sceneID string) (*domain.Scene, bool) {
+	if _, ok := h.verifyEpisode(w, r, projectID, seasonID, episodeID); !ok {
+		return nil, false
+	}
+	sc, err := h.service.GetScene(r.Context(), sceneID)
+	if err != nil || sc.EpisodeID != episodeID {
+		platformhttp.WriteError(w, http.StatusNotFound, "SCENE_NOT_FOUND", "Scene not found", platformhttp.RequestIDFrom(r), nil)
+		return nil, false
+	}
+	return sc, true
+}
+
 func (h *StoryHandler) getStory(w http.ResponseWriter, r *http.Request) {
 	projectID := r.PathValue("projectId")
 	series, err := h.service.GetSeriesByProject(r.Context(), projectID)
@@ -126,9 +169,8 @@ func (h *StoryHandler) createSeason(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *StoryHandler) getSeason(w http.ResponseWriter, r *http.Request) {
-	s, err := h.service.GetSeason(r.Context(), r.PathValue("seasonId"))
-	if err != nil {
-		platformhttp.WriteError(w, http.StatusNotFound, "SEASON_NOT_FOUND", "Season not found", platformhttp.RequestIDFrom(r), nil)
+	s, ok := h.verifySeason(w, r, r.PathValue("projectId"), r.PathValue("seasonId"))
+	if !ok {
 		return
 	}
 	arcs, _ := h.service.ListArcs(r.Context(), s.ID)
@@ -153,6 +195,9 @@ func (r *createArcReq) Validate() error {
 }
 
 func (h *StoryHandler) listArcs(w http.ResponseWriter, r *http.Request) {
+	if _, ok := h.verifySeason(w, r, r.PathValue("projectId"), r.PathValue("seasonId")); !ok {
+		return
+	}
 	arcs, err := h.service.ListArcs(r.Context(), r.PathValue("seasonId"))
 	if err != nil {
 		platformhttp.WriteErrorFrom(w, r, err)
@@ -164,6 +209,9 @@ func (h *StoryHandler) listArcs(w http.ResponseWriter, r *http.Request) {
 func (h *StoryHandler) createArc(w http.ResponseWriter, r *http.Request) {
 	var req createArcReq
 	if !platformhttp.DecodeAndValidate(w, r, &req) {
+		return
+	}
+	if _, ok := h.verifySeason(w, r, r.PathValue("projectId"), r.PathValue("seasonId")); !ok {
 		return
 	}
 	a, err := h.service.CreateArc(r.Context(), r.PathValue("seasonId"), req.Title, req.Number)
@@ -189,6 +237,9 @@ func (r *createEpisodeReq) Validate() error {
 }
 
 func (h *StoryHandler) listEpisodes(w http.ResponseWriter, r *http.Request) {
+	if _, ok := h.verifySeason(w, r, r.PathValue("projectId"), r.PathValue("seasonId")); !ok {
+		return
+	}
 	eps, err := h.service.ListEpisodes(r.Context(), r.PathValue("seasonId"))
 	if err != nil {
 		platformhttp.WriteErrorFrom(w, r, err)
@@ -202,6 +253,9 @@ func (h *StoryHandler) createEpisode(w http.ResponseWriter, r *http.Request) {
 	if !platformhttp.DecodeAndValidate(w, r, &req) {
 		return
 	}
+	if _, ok := h.verifySeason(w, r, r.PathValue("projectId"), r.PathValue("seasonId")); !ok {
+		return
+	}
 	ep, err := h.service.CreateEpisode(r.Context(), r.PathValue("seasonId"), req.ArcID, req.Title, req.Summary, req.Number)
 	if err != nil {
 		platformhttp.WriteErrorFrom(w, r, err)
@@ -211,9 +265,8 @@ func (h *StoryHandler) createEpisode(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *StoryHandler) getEpisode(w http.ResponseWriter, r *http.Request) {
-	ep, err := h.service.GetEpisode(r.Context(), r.PathValue("episodeId"))
-	if err != nil {
-		platformhttp.WriteError(w, http.StatusNotFound, "EPISODE_NOT_FOUND", "Episode not found", platformhttp.RequestIDFrom(r), nil)
+	ep, ok := h.verifyEpisode(w, r, r.PathValue("projectId"), r.PathValue("seasonId"), r.PathValue("episodeId"))
+	if !ok {
 		return
 	}
 	scenes, _ := h.service.ListScenes(r.Context(), ep.ID)
@@ -227,7 +280,17 @@ type updateEpisodeReq struct {
 	Status  *domain.EpisodeStatus `json:"status"`
 }
 
-func (r *updateEpisodeReq) Validate() error { return nil }
+func (r *updateEpisodeReq) Validate() error {
+	if r.Status == nil {
+		return nil
+	}
+	switch *r.Status {
+	case domain.EpisodePlanned, domain.EpisodeScripted, domain.EpisodeProducing,
+		domain.EpisodeValidating, domain.EpisodeCompleted, domain.EpisodePublished:
+		return nil
+	}
+	return &platformhttp.ValidationError{Fields: []platformhttp.FieldError{{Field: "status", Message: "invalid episode status"}}}
+}
 
 func (h *StoryHandler) updateEpisode(w http.ResponseWriter, r *http.Request) {
 	episodeID := r.PathValue("episodeId")
@@ -235,10 +298,16 @@ func (h *StoryHandler) updateEpisode(w http.ResponseWriter, r *http.Request) {
 	if !platformhttp.DecodeAndValidate(w, r, &req) {
 		return
 	}
-	ep, err := h.service.GetEpisode(r.Context(), episodeID)
-	if err != nil {
-		platformhttp.WriteError(w, http.StatusNotFound, "EPISODE_NOT_FOUND", "Episode not found", platformhttp.RequestIDFrom(r), nil)
+	ep, ok := h.verifyEpisode(w, r, r.PathValue("projectId"), r.PathValue("seasonId"), episodeID)
+	if !ok {
 		return
+	}
+	var err error
+	if req.Title != nil || req.Summary != nil {
+		if ep, err = h.service.UpdateEpisodeMeta(r.Context(), episodeID, req.Title, req.Summary); err != nil {
+			platformhttp.WriteErrorFrom(w, r, err)
+			return
+		}
 	}
 	if req.Script != nil {
 		if ep, err = h.service.SetEpisodeScript(r.Context(), episodeID, *req.Script); err != nil {
@@ -272,6 +341,9 @@ func (r *createSceneReq) Validate() error {
 }
 
 func (h *StoryHandler) listScenes(w http.ResponseWriter, r *http.Request) {
+	if _, ok := h.verifyEpisode(w, r, r.PathValue("projectId"), r.PathValue("seasonId"), r.PathValue("episodeId")); !ok {
+		return
+	}
 	scenes, err := h.service.ListScenes(r.Context(), r.PathValue("episodeId"))
 	if err != nil {
 		platformhttp.WriteErrorFrom(w, r, err)
@@ -285,6 +357,9 @@ func (h *StoryHandler) createScene(w http.ResponseWriter, r *http.Request) {
 	if !platformhttp.DecodeAndValidate(w, r, &req) {
 		return
 	}
+	if _, ok := h.verifyEpisode(w, r, r.PathValue("projectId"), r.PathValue("seasonId"), r.PathValue("episodeId")); !ok {
+		return
+	}
 	sc, err := h.service.CreateScene(r.Context(), r.PathValue("episodeId"),
 		req.Title, req.Description, req.LocationID, req.TimeOfDay, req.Number, req.CharacterIDs)
 	if err != nil {
@@ -295,9 +370,8 @@ func (h *StoryHandler) createScene(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *StoryHandler) getScene(w http.ResponseWriter, r *http.Request) {
-	sc, err := h.service.GetScene(r.Context(), r.PathValue("sceneId"))
-	if err != nil {
-		platformhttp.WriteError(w, http.StatusNotFound, "SCENE_NOT_FOUND", "Scene not found", platformhttp.RequestIDFrom(r), nil)
+	sc, ok := h.verifyScene(w, r, r.PathValue("projectId"), r.PathValue("seasonId"), r.PathValue("episodeId"), r.PathValue("sceneId"))
+	if !ok {
 		return
 	}
 	beats, _ := h.service.ListBeats(r.Context(), sc.ID)
@@ -314,6 +388,9 @@ type createBeatReq struct {
 func (r *createBeatReq) Validate() error { return nil }
 
 func (h *StoryHandler) listBeats(w http.ResponseWriter, r *http.Request) {
+	if _, ok := h.verifyScene(w, r, r.PathValue("projectId"), r.PathValue("seasonId"), r.PathValue("episodeId"), r.PathValue("sceneId")); !ok {
+		return
+	}
 	beats, err := h.service.ListBeats(r.Context(), r.PathValue("sceneId"))
 	if err != nil {
 		platformhttp.WriteErrorFrom(w, r, err)
@@ -325,6 +402,9 @@ func (h *StoryHandler) listBeats(w http.ResponseWriter, r *http.Request) {
 func (h *StoryHandler) createBeat(w http.ResponseWriter, r *http.Request) {
 	var req createBeatReq
 	if !platformhttp.DecodeAndValidate(w, r, &req) {
+		return
+	}
+	if _, ok := h.verifyScene(w, r, r.PathValue("projectId"), r.PathValue("seasonId"), r.PathValue("episodeId"), r.PathValue("sceneId")); !ok {
 		return
 	}
 	b, err := h.service.CreateBeat(r.Context(), r.PathValue("sceneId"), req.Action, req.Dialogue, req.CharacterID, req.Seq)

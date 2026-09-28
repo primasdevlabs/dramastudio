@@ -5,6 +5,8 @@ import (
 
 	"dramastudio/internal/ai/application"
 	"dramastudio/internal/ai/domain"
+	platformhttp "dramastudio/internal/platform/http"
+	"dramastudio/internal/platform/security"
 )
 
 type AIHandler struct {
@@ -16,6 +18,17 @@ type AIHandler struct {
 
 func NewAIHandler(policy *application.PolicyService, admin *application.ProviderAdminService, executor *application.ExecuteGenerationHandler, repo domain.ModelRegistryRepository) *AIHandler {
 	return &AIHandler{policy: policy, admin: admin, executor: executor, repo: repo}
+}
+
+// requireOwner gates admin mutations — provider credentials, model registry
+// edits, and routing policies affect the whole org and real spend (§60).
+func requireOwner(w http.ResponseWriter, r *http.Request) bool {
+	p, _ := security.PrincipalFrom(r.Context())
+	if !p.HasPermission("*") && !p.Service {
+		platformhttp.WriteError(w, http.StatusForbidden, "FORBIDDEN", "Only org owners may change AI provider configuration", platformhttp.RequestIDFrom(r), nil)
+		return false
+	}
+	return true
 }
 
 func (h *AIHandler) RegisterRoutes(mux *http.ServeMux) {

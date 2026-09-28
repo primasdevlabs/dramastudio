@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useParams } from "next/navigation";
 import {
   Layers,
   Network,
@@ -24,12 +25,8 @@ import Link from "next/link";
 import { api } from "@/lib/api/client";
 import type { SeriesBible, Season } from "@/lib/api/types";
 
-export default function StoryWorkspacePage({
-  params,
-}: {
-  params: { projectId: string };
-}) {
-  const { projectId } = params;
+export default function StoryWorkspacePage() {
+  const { projectId } = useParams<{ projectId: string }>();
 
   const { data: bible } = useQuery({
     queryKey: ["bible", projectId],
@@ -40,10 +37,10 @@ export default function StoryWorkspacePage({
   const { data: seasons } = useQuery({
     queryKey: ["seasons", projectId],
     queryFn: async () => {
-      const res = await api.get<{ seasons: Season[] }>(
+      const res = await api.get<{ items: Season[] }>(
         `/v1/projects/${projectId}/seasons`
       );
-      return res.seasons ?? [];
+      return res.items ?? [];
     },
   });
 

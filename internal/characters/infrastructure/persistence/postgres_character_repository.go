@@ -60,7 +60,18 @@ func (r *PostgresCharacterRepository) FindByID(ctx context.Context, id domain.Ch
 			ON v.character_id = c.id AND v.version = (
 				SELECT MAX(version) FROM characters.character_versions WHERE character_id = c.id)
 		WHERE c.id = $1`, id)
-	return scanCharacter(row)
+	c, err := scanCharacter(row)
+	if err != nil {
+		return nil, err
+	}
+	// Relationships live in their own table — load them so reads see the
+	// same aggregate the service assembled.
+	rels, err := r.ListRelationships(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	c.Relationships = rels
+	return c, nil
 }
 
 func (r *PostgresCharacterRepository) List(ctx context.Context, projectID string) ([]*domain.Character, error) {

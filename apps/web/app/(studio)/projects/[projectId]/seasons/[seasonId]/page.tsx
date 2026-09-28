@@ -20,6 +20,7 @@ import {
 } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
 import Link from "next/link";
+import { useParams } from "next/navigation";
 import { api } from "@/lib/api/client";
 import type { Season, Episode } from "@/lib/api/types";
 
@@ -31,12 +32,8 @@ const STATUS_COLORS: Record<string, string> = {
   COMPLETED: "emerald",
 };
 
-export default function SeasonDetailPage({
-  params,
-}: {
-  params: { projectId: string; seasonId: string };
-}) {
-  const { projectId, seasonId } = params;
+export default function SeasonDetailPage() {
+  const { projectId, seasonId } = useParams<{ projectId: string; seasonId: string }>();
   const queryClient = useQueryClient();
 
   const [opened, setOpened] = useState(false);
@@ -46,22 +43,22 @@ export default function SeasonDetailPage({
 
   const { data: season } = useQuery({
     queryKey: ["seasons", "detail", seasonId],
-    queryFn: () => api.get<Season>(`/v1/seasons/${seasonId}`),
+    queryFn: () => api.get<Season>(`/v1/projects/${projectId}/seasons/${seasonId}`),
   });
 
   const { data: episodes, isLoading } = useQuery({
     queryKey: ["episodes", seasonId],
     queryFn: async () => {
-      const res = await api.get<{ episodes: Episode[] }>(
-        `/v1/seasons/${seasonId}/episodes`
+      const res = await api.get<{ items: Episode[] }>(
+        `/v1/projects/${projectId}/seasons/${seasonId}/episodes`
       );
-      return res.episodes ?? [];
+      return res.items ?? [];
     },
   });
 
   const createMutation = useMutation({
     mutationFn: () =>
-      api.post<Episode>(`/v1/seasons/${seasonId}/episodes`, {
+      api.post<Episode>(`/v1/projects/${projectId}/seasons/${seasonId}/episodes`, {
         number: epNumber,
         title: epTitle,
         summary: epSummary,

@@ -77,6 +77,16 @@ func (h *WorldHandler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /v1/projects/{projectId}/world/rules", h.createRule)
 }
 
+// verifyLocation confirms locationId belongs to the path project.
+func (h *WorldHandler) verifyLocation(w http.ResponseWriter, r *http.Request) bool {
+	loc, err := h.service.GetLocation(r.Context(), r.PathValue("locationId"))
+	if err != nil || loc.ProjectID != r.PathValue("projectId") {
+		platformhttp.WriteError(w, http.StatusNotFound, "LOCATION_NOT_FOUND", "Location not found", platformhttp.RequestIDFrom(r), nil)
+		return false
+	}
+	return true
+}
+
 func (h *WorldHandler) listLocations(w http.ResponseWriter, r *http.Request) {
 	locs, err := h.service.ListLocations(r.Context(), r.PathValue("projectId"))
 	if err != nil {
@@ -101,17 +111,19 @@ func (h *WorldHandler) createLocation(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *WorldHandler) getLocation(w http.ResponseWriter, r *http.Request) {
-	loc, err := h.service.GetLocation(r.Context(), r.PathValue("locationId"))
-	if err != nil {
-		platformhttp.WriteError(w, http.StatusNotFound, "LOCATION_NOT_FOUND", "Location not found", platformhttp.RequestIDFrom(r), nil)
+	if !h.verifyLocation(w, r) {
 		return
 	}
+	loc, _ := h.service.GetLocation(r.Context(), r.PathValue("locationId"))
 	platformhttp.WriteJSON(w, http.StatusOK, loc)
 }
 
 func (h *WorldHandler) addVariant(w http.ResponseWriter, r *http.Request) {
 	var req addVariantReq
 	if !platformhttp.DecodeAndValidate(w, r, &req) {
+		return
+	}
+	if !h.verifyLocation(w, r) {
 		return
 	}
 	loc, err := h.service.AddVariant(r.Context(), r.PathValue("locationId"), req.Name, req.Attributes)

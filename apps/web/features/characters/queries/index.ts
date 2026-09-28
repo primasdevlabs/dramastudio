@@ -4,26 +4,30 @@ import type { Character } from "@/lib/api/types";
 
 export const characterKeys = {
   all: (projectId: string) => ["characters", projectId] as const,
-  detail: (characterId: string) => ["characters", "detail", characterId] as const,
+  detail: (projectId: string, characterId: string) =>
+    ["characters", "detail", projectId, characterId] as const,
 };
 
 export function useCharacters(projectId: string) {
   return useQuery({
     queryKey: characterKeys.all(projectId),
     queryFn: async () => {
-      const res = await api.get<{ characters: Character[] }>(
-        `/v1/characters?project_id=${projectId}`
+      const res = await api.get<{ items: Character[] }>(
+        `/v1/projects/${projectId}/characters`
       );
-      return res.characters ?? [];
+      return res.items ?? [];
     },
     enabled: Boolean(projectId),
   });
 }
 
-export function useCharacter(characterId: string) {
+export function useCharacter(projectId: string, characterId: string) {
   return useQuery({
-    queryKey: characterKeys.detail(characterId),
-    queryFn: () => api.get<Character>(`/v1/characters/${characterId}`),
-    enabled: Boolean(characterId),
+    queryKey: characterKeys.detail(projectId, characterId),
+    queryFn: () =>
+      api.get<Character>(
+        `/v1/projects/${projectId}/characters/${characterId}`
+      ),
+    enabled: Boolean(projectId && characterId),
   });
 }

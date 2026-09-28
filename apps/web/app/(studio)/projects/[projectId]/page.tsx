@@ -1,6 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import { useParams } from "next/navigation";
 import Link from "next/link";
 import {
   Clapperboard,
@@ -19,8 +20,8 @@ import {
 import { api } from "@/lib/api/client";
 import { Project, SeriesBible } from "@/lib/api/types";
 
-export default function ProjectDashboardPage({ params }: { params: { projectId: string } }) {
-  const { projectId } = params;
+export default function ProjectDashboardPage() {
+  const { projectId } = useParams<{ projectId: string }>();
 
   const { data: project } = useQuery({
     queryKey: ["project", projectId],

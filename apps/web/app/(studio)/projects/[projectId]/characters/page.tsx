@@ -5,11 +5,12 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Users, Plus, Shirt, UserCheck } from "lucide-react";
 import { Paper, Group, Stack, Title, Text, Badge, Button, Modal, TextInput, Textarea, ThemeIcon, Avatar, SimpleGrid, Card } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
+import { useParams } from "next/navigation";
 import { api } from "@/lib/api/client";
 import { Character } from "@/lib/api/types";
 
-export default function CharacterStudioPage({ params }: { params: { projectId: string } }) {
-  const { projectId } = params;
+export default function CharacterStudioPage() {
+  const { projectId } = useParams<{ projectId: string }>();
   const queryClient = useQueryClient();
 
   const [name, setName] = useState("");
@@ -20,15 +21,14 @@ export default function CharacterStudioPage({ params }: { params: { projectId: s
   const { data: characters, isLoading } = useQuery({
     queryKey: ["characters", projectId],
     queryFn: async () => {
-      const res = await api.get<{ characters: Character[] }>("/v1/characters");
-      return res.characters || [];
+      const res = await api.get<{ items: Character[] }>(`/v1/projects/${projectId}/characters`);
+      return res.items || [];
     },
   });
 
   const createMutation = useMutation({
     mutationFn: async () => {
-      return api.post<Character>("/v1/characters", {
-        project_id: projectId,
+      return api.post<Character>(`/v1/projects/${projectId}/characters`, {
         name,
         role,
         bio,

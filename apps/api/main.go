@@ -18,12 +18,16 @@ import (
 	canonHTTP "dramastudio/internal/canon/interfaces/http"
 	charsHTTP "dramastudio/internal/characters/interfaces/http"
 	contHTTP "dramastudio/internal/continuity/interfaces/http"
+	"dramastudio/internal/identity/infrastructure/sso"
 	identHTTP "dramastudio/internal/identity/interfaces/http"
 	intelHTTP "dramastudio/internal/intelligence/interfaces/http"
 	mediaHTTP "dramastudio/internal/media/interfaces/http"
 	platformhttp "dramastudio/internal/platform/http"
+	"dramastudio/internal/platform/observability/tracing"
+	"dramastudio/internal/platform/security"
 	postHTTP "dramastudio/internal/postproduction/interfaces/http"
 	prodHTTP "dramastudio/internal/production/interfaces/http"
+	projectsdomain "dramastudio/internal/projects/domain"
 	projHTTP "dramastudio/internal/projects/interfaces/http"
 	pubHTTP "dramastudio/internal/publishing/interfaces/http"
 	storyHTTP "dramastudio/internal/story/interfaces/http"
@@ -42,6 +46,15 @@ func main() {
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
+
+	// OpenTelemetry provider: stdout exporter when configured, no-op
+	// otherwise (§62).
+	shutdownTrace, err := tracing.InitProvider(ctx, cfg.Observability.ServiceName, cfg.Observability.TraceExporter, os.Stderr)
+	if err != nil {
+		slog.Error("tracing", "err", err)
+		os.Exit(1)
+	}
+	defer func() { _ = shutdownTrace(context.Background()) }()
 
 	container, err := appwiring.Build(ctx, cfg)
 	if err != nil {
@@ -83,9 +96,13 @@ func routes(cfg *configs.Config, c *appwiring.Container) http.Handler {
 			"status": "ok", "service": cfg.Observability.ServiceName,
 		})
 	})
-	mux.Handle("GET /v1/events", platformhttp.NewSSEBroker())
+	mux.Handle("GET /v1/events", c.Broker)
 
-	identHTTP.NewIdentityHandler(c.Identity, c.JWT).RegisterRoutes(mux)
+	var googleVerifier *sso.GoogleVerifier
+	if cfg.Security.GoogleClientID != "" {
+		googleVerifier = sso.NewGoogleVerifier(cfg.Security.GoogleClientID)
+	}
+	identHTTP.NewIdentityHandler(c.Identity, c.JWT, googleVerifier, cfg.Environment == "development").RegisterRoutes(mux)
 	projHTTP.NewProjectsHandler(c.Projects).RegisterRoutes(mux)
 	storyHTTP.NewStoryHandler(c.Story).RegisterRoutes(mux)
 	canonHTTP.NewCanonHandler(c.Canon).RegisterRoutes(mux)
@@ -94,11 +111,24 @@ func routes(cfg *configs.Config, c *appwiring.Container) http.Handler {
 	agentsHTTP.NewAgentsHandler(c.Agents).RegisterRoutes(mux)
 	prodHTTP.NewProductionHandler(c.Production).RegisterRoutes(mux)
 	contHTTP.NewContinuityHandler(c.Continuity).RegisterRoutes(mux)
-	mediaHTTP.NewMediaHandler(c.Media, webhookSecrets()).RegisterRoutes(mux)
-	postHTTP.NewPostproductionHandler(c.Postprod).RegisterRoutes(mux)
-	pubHTTP.NewPublishingHandler(c.Publishing).RegisterRoutes(mux)
+	mediaH := mediaHTTP.NewMediaHandler(c.Media, webhookSecrets())
+	mediaH.SetDeliveries(c.WebhookDeliveries)
+	mediaH.RegisterRoutes(mux)
+	postH := postHTTP.NewPostproductionHandler(c.Postprod)
+	postH.SetEpisodeResolver(c.Story.ProjectOfEpisode)
+	postH.RegisterRoutes(mux)
+	pubH := pubHTTP.NewPublishingHandler(c.Publishing)
+	pubH.SetEpisodeResolver(c.Story.ProjectOfEpisode)
+	pubH.RegisterRoutes(mux)
 	aiHTTP.NewAIHandler(c.AIPolicies, c.AIAdmin, c.AIExecutor, c.ModelRegistry).RegisterRoutes(mux)
-	intelHTTP.NewIntelligenceHandler(c.Intel).RegisterRoutes(mux)
+	projectOrg := func(ctx context.Context, projectID string) (string, error) {
+		proj, err := c.Projects.GetProject(ctx, projectsdomain.ProjectID(projectID))
+		if err != nil {
+			return "", err
+		}
+		return proj.OrgID, nil
+	}
+	intelHTTP.NewIntelligenceHandler(c.Intel, platformhttp.ProjectResolver(projectOrg)).RegisterRoutes(mux)
 	analyticsHTTP.NewAnalyticsHandler(c.Analytics).RegisterRoutes(mux)
 
 	var authn platformhttp.Authenticator
@@ -113,7 +143,22 @@ func routes(cfg *configs.Config, c *appwiring.Container) http.Handler {
 			RequireAuth: cfg.Security.RequireAuth,
 			DevUserID:   cfg.Security.DevUserID,
 			DevOrgID:    cfg.Security.DevOrgID,
+			APIKeys: func(ctx context.Context, key string) (security.Principal, error) {
+				cred, err := c.Identity.AuthenticateAPIKey(ctx, key)
+				if err != nil {
+					return security.Principal{}, err
+				}
+				return security.Principal{
+					UserID:      cred.UserID,
+					OrgID:       cred.OrgID,
+					Roles:       []string{"service"},
+					Permissions: cred.Permissions,
+					Service:     true,
+				}, nil
+			},
 		}, authn),
+		// Org-scope every /v1/projects/{id}/... route across all modules (§8).
+		platformhttp.ProjectGuard(platformhttp.ProjectResolver(projectOrg)),
 	)
 }
 

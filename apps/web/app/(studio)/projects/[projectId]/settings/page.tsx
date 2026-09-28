@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useParams } from "next/navigation";
 import {
   Settings,
   Cpu,
@@ -58,12 +59,8 @@ interface TeamMember {
   lastActive: string;
 }
 
-export default function ProjectSettingsPage({
-  params,
-}: {
-  params: { projectId: string };
-}) {
-  const { projectId } = params;
+export default function ProjectSettingsPage() {
+  const { projectId } = useParams<{ projectId: string }>();
 
   const {
     globalSettings,
@@ -90,25 +87,31 @@ export default function ProjectSettingsPage({
     queryFn: () => api.get<Project>(`/v1/projects/${projectId}`).catch(() => null),
   });
 
+  // Capability → model mapping comes from the project's AI routing
+  // policies; system-scope defaults fill anything the project hasn't set.
   const { data: capabilities } = useQuery({
     queryKey: ["capabilities", projectId],
     queryFn: async () => {
       const res = await api
-        .get<{ capabilities: CapabilityMapping[] }>(
-          `/v1/projects/${projectId}/settings/capabilities`
+        .get<{ items: { capability: string; model_id: string; provider_id: string }[] }>(
+          `/v1/projects/${projectId}/ai/policies`
         )
         .catch(() => null);
 
-      return (
-        res?.capabilities ?? [
-          { capability: "Scriptwriting & Dialogue", model: effectiveSettings.scriptModel, provider: "OpenAI", status: "active" as const },
-          { capability: "Video Shot Generation", model: effectiveSettings.videoGenModel, provider: "Runway", status: "active" as const },
-          { capability: "Voice & Dialogue Synthesis", model: effectiveSettings.characterVoiceEngine, provider: "ElevenLabs", status: "active" as const },
-          { capability: "Storyboard Layout", model: "StoryboardAgent-v1", provider: "Internal", status: "active" as const },
-          { capability: "Continuity Verification", model: "ContinuityChecker-v3", provider: "Internal", status: "active" as const },
-          { capability: "Image Generation", model: effectiveSettings.imageGenModel, provider: "Midjourney", status: "active" as const },
-        ]
-      );
+      const rows = (res?.items ?? []).map((p) => ({
+        capability: p.capability,
+        model: p.model_id || "policy default",
+        provider: p.provider_id || "auto-routed",
+        status: "active" as const,
+      }));
+      return rows.length > 0
+        ? rows
+        : [
+            { capability: "script_writing", model: effectiveSettings.scriptModel, provider: "auto-routed", status: "active" as const },
+            { capability: "video_generation", model: effectiveSettings.videoGenModel, provider: "auto-routed", status: "active" as const },
+            { capability: "voice", model: effectiveSettings.characterVoiceEngine, provider: "auto-routed", status: "active" as const },
+            { capability: "image_generation", model: effectiveSettings.imageGenModel, provider: "auto-routed", status: "active" as const },
+          ];
     },
   });
 

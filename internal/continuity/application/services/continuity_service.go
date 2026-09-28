@@ -2,11 +2,13 @@ package services
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/google/uuid"
 
 	"dramastudio/internal/continuity/domain"
+	"dramastudio/internal/platform/events"
 )
 
 // CheckInput carries the data a checker needs for one run. Callers
@@ -37,6 +39,12 @@ type ContinuityService struct {
 	character *CharacterChecker
 	visual    *VisualChecker
 	wardrobe  *WardrobeChecker
+	events    *events.Bus // may be nil; set via SetEvents
+}
+
+// SetEvents injects the domain event bus (§48). Nil-safe emitter.
+func (s *ContinuityService) SetEvents(b *events.Bus) {
+	s.events = b
 }
 
 func NewContinuityService(repo domain.ContinuityRepository) *ContinuityService {
@@ -100,6 +108,8 @@ func (s *ContinuityService) RunCheck(ctx context.Context, in CheckInput) (*domai
 		if err := s.repo.SaveIssue(ctx, issue); err != nil {
 			return nil, nil, err
 		}
+		s.events.Emit(ctx, events.ContinuityIssueDetected, in.ProjectID, issue.ID,
+			fmt.Sprintf("Continuity %s: %s (%s)", v.Severity, v.Description, v.Entity))
 		issues = append(issues, issue)
 	}
 
@@ -138,6 +148,10 @@ func (s *ContinuityService) ListChecks(ctx context.Context, projectID, episodeID
 	return s.repo.ListChecks(ctx, projectID, episodeID)
 }
 
+func (s *ContinuityService) GetIssue(ctx context.Context, id string) (*domain.ContinuityIssue, error) {
+	return s.repo.FindIssueByID(ctx, id)
+}
+
 // ResolveIssue marks an issue resolved or wontfix (human control).
 func (s *ContinuityService) ResolveIssue(ctx context.Context, id, resolution string, wontFix bool) (*domain.ContinuityIssue, error) {
 	i, err := s.repo.FindIssueByID(ctx, id)
@@ -155,6 +169,8 @@ func (s *ContinuityService) ResolveIssue(ctx context.Context, id, resolution str
 	if err := s.repo.SaveIssue(ctx, i); err != nil {
 		return nil, err
 	}
+	s.events.Emit(ctx, events.ContinuityIssueResolved, i.ProjectID, i.ID,
+		fmt.Sprintf("Continuity issue resolved: %s", resolution))
 	return i, nil
 }
 

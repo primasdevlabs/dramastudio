@@ -26,15 +26,12 @@ import {
 } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
 import Link from "next/link";
+import { useParams } from "next/navigation";
 import { api } from "@/lib/api/client";
 import type { Season } from "@/lib/api/types";
 
-export default function SeasonsPage({
-  params,
-}: {
-  params: { projectId: string };
-}) {
-  const { projectId } = params;
+export default function SeasonsPage() {
+  const { projectId } = useParams<{ projectId: string }>();
   const queryClient = useQueryClient();
 
   const [opened, setOpened] = useState(false);
@@ -45,10 +42,10 @@ export default function SeasonsPage({
   const { data: seasons, isLoading } = useQuery({
     queryKey: ["seasons", projectId],
     queryFn: async () => {
-      const res = await api.get<{ seasons: Season[] }>(
+      const res = await api.get<{ items: Season[] }>(
         `/v1/projects/${projectId}/seasons`
       );
-      return res.seasons ?? [];
+      return res.items ?? [];
     },
   });
 

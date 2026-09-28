@@ -10,14 +10,19 @@ import (
 	"dramastudio/internal/intelligence/application"
 	"dramastudio/internal/intelligence/domain"
 	platformhttp "dramastudio/internal/platform/http"
+	"dramastudio/internal/platform/security"
 )
 
 type IntelligenceHandler struct {
-	svc *application.IntelligenceService
+	svc        *application.IntelligenceService
+	projectOrg platformhttp.ProjectResolver // may be nil; disables org checks
 }
 
-func NewIntelligenceHandler(svc *application.IntelligenceService) *IntelligenceHandler {
-	return &IntelligenceHandler{svc: svc}
+// NewIntelligenceHandler wires the facade plus a project→org resolver so
+// body-carried project_ids (execute/preview) get the same tenancy checks the
+// ProjectGuard applies to path IDs.
+func NewIntelligenceHandler(svc *application.IntelligenceService, projectOrg platformhttp.ProjectResolver) *IntelligenceHandler {
+	return &IntelligenceHandler{svc: svc, projectOrg: projectOrg}
 }
 
 func (h *IntelligenceHandler) RegisterRoutes(mux *http.ServeMux) {
@@ -70,9 +75,28 @@ type taskRequest struct {
 	Task    domain.TaskContext `json:"task"`
 }
 
+// verifyTaskProject enforces org ownership when the task carries a project
+// ID — execute/preview are not under /v1/projects/{id} so the guard cannot
+// see them.
+func (h *IntelligenceHandler) verifyTaskProject(w http.ResponseWriter, r *http.Request, projectID string) bool {
+	if projectID == "" || h.projectOrg == nil {
+		return true
+	}
+	p, _ := security.PrincipalFrom(r.Context())
+	orgID, err := h.projectOrg(r.Context(), projectID)
+	if err != nil || (orgID != "" && orgID != p.OrgID) {
+		platformhttp.WriteError(w, http.StatusNotFound, "PROJECT_NOT_FOUND", "Project not found", platformhttp.RequestIDFrom(r), nil)
+		return false
+	}
+	return true
+}
+
 func (h *IntelligenceHandler) previewContext(w http.ResponseWriter, r *http.Request) {
 	var req taskRequest
 	if !platformhttp.DecodeJSON(w, r, &req) {
+		return
+	}
+	if !h.verifyTaskProject(w, r, req.Task.ProjectID) {
 		return
 	}
 	ec, err := h.svc.Preview(r.Context(), req.AgentID, req.Task)
@@ -88,6 +112,9 @@ func (h *IntelligenceHandler) execute(w http.ResponseWriter, r *http.Request) {
 	if !platformhttp.DecodeJSON(w, r, &req) {
 		return
 	}
+	if !h.verifyTaskProject(w, r, req.Task.ProjectID) {
+		return
+	}
 	rec, res, err := h.svc.Execute(r.Context(), req.AgentID, req.Task)
 	if err != nil {
 		platformhttp.WriteErrorFrom(w, r, err)
@@ -99,6 +126,12 @@ func (h *IntelligenceHandler) execute(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *IntelligenceHandler) savePolicyLayer(w http.ResponseWriter, r *http.Request) {
+	// Policy layers override AI routing for the whole org — owner-only.
+	principal, _ := security.PrincipalFrom(r.Context())
+	if !principal.HasPermission("*") {
+		platformhttp.WriteError(w, http.StatusForbidden, "FORBIDDEN", "Only org owners may edit policy layers", platformhttp.RequestIDFrom(r), nil)
+		return
+	}
 	policyID, ok := platformhttp.RequirePathValue(w, r, "id")
 	if !ok {
 		return
